@@ -1,32 +1,41 @@
 # GitHub-as-Code: Enterprise Platform & Application Governance
 
-This Terraform configuration automates the provisioning of enterprise repositories on GitHub, scaled to support hundreds of repositories with rigorous branch and environment protection.
+This Terraform configuration automates the provisioning of enterprise repositories on GitHub, scaled to support hundreds of repositories with rigorous branch protection and environment security gates.
 
 ---
 
-## 4 Core Enterprise Governance Rules Enforced
+## 5 Core Enterprise Governance Rules Enforced
 
-### 1. `dev` Branch Direct Commits Blocked
+### 1. `dev` & `main` Branch Direct Commits Blocked
 - Direct `git push` to `dev` (and `main`) is strictly rejected.
 - All code changes **must** arrive via a Pull Request.
-- Requires approving reviews, Code Owner sign-off, strict linear history, and passing status checks.
-- Enforced on administrators (`enforce_admins = true`).
+- Requires approving reviews, Code Owner sign-off, conversation resolution, and strict linear history.
+- Enforced on repository administrators (`enforce_admins = true`, no bypass permitted).
 
-### 2. Designated Approver Gate on `prod` Environment
-- Target reviewer: **`seniorguy@gmail.com`** (GitHub user: `seniorguy`).
-- Deployments or workflow runs targeting the `prod` environment are paused until approved.
+### 2. Status Checks Decoupled from Branch Protection
+- **Status checks are removed from branch protection** because each repository uses a different CI/CD pipeline (e.g., container build, unit tests, security scans, static web app builds).
+- This avoids tight coupling between centralized Terraform code and diverse repository workflows while keeping direct commit blocks 100% airtight.
+
+### 3. Per-Repository Designated Approver Gate in `repositories.json`
+- Designated approvers are configured **individually per repository** directly inside `/githubascode/repositories.json`.
+  - `corp-billing-api`: `seniorguy@gmail.com` (`seniorguy`)
+  - `corp-billing-web`: `billing-web-lead@gmail.com` (`billingweblead`)
+  - `corp-products-api`: `product-architect@gmail.com` (`productarchitect`)
+  - `corp-platform-management`: `ops-lead@gmail.com` (`opslead`)
+  - `corp-platform-connectivity`: `network-lead@gmail.com` (`netlead`)
+- Deployments or workflow runs targeting the `prod` environment pause until approved by that repository's designated approvers.
 - Administrators cannot bypass this gate (`can_admins_bypass = false`).
 
-### 3. 4 Full Deployment Environments with Dedicated Azure OIDC
+### 4. 4 Full Deployment Environments with Dedicated Azure OIDC
 Every application repository receives 4 isolated deployment environments:
 - **`dev`**: Development workload subscription & SPN
 - **`qa`**: Automated QA / Integration testing subscription & SPN
 - **`cae`**: Customer Acceptance Environment / UAT staging subscription & SPN
 - **`prod`**: Production subscription & SPN (Gated by designated approver)
 
-Each environment receives its own `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` stored securely in encrypted environment secrets.
+Each environment receives its own `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` stored securely in encrypted GitHub environment secrets.
 
-### 4. Scalable Decoupled Catalog (`repositories.json`)
+### 5. Scalable Decoupled Catalog (`repositories.json`)
 - To manage hundreds of repositories without editing Terraform code, all repository definitions are maintained in a separate file: **`/githubascode/repositories.json`**.
 - Onboarding repository #100 or #500 is as simple as appending a JSON object to `repositories.json` and running `terraform apply`.
 
@@ -40,9 +49,9 @@ Each environment receives its own `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZU
 ├── repositories.tf            # Dynamically parses and normalizes repositories.json
 ├── main.tf                    # Instantiates module.repositories with approvals & branch rules
 ├── provider.tf                # provider "github" {} (auto env discovery)
-├── variables.tf               # Approver configuration and optional catalog overrides
+├── variables.tf               # Root variables and optional catalog overrides
 ├── outputs.tf                 # Exports URLs, environments, branches, and approver status
-├── terraform.tfvars.example   # Optional tfvars for approver username/email
+├── terraform.tfvars.example   # Optional tfvars for catalog overrides
 └── modules/
     └── repository/            # Reusable GitHub repository module
         ├── main.tf            # github_repository, branch_protection, environments, secrets
@@ -63,7 +72,12 @@ Simply append a new entry to `repositories.json`:
   "description": "Payment Gateway Microservice",
   "protected_branches": ["main", "dev"],
   "required_approvals": 1,
-  "status_checks": ["Unit Tests", "Integration Tests"],
+  "prod_approvers": [
+    {
+      "email": "payments-lead@gmail.com",
+      "username": "paymentslead"
+    }
+  ],
   "topics": ["microservice", "payments", "api"],
   "environments": {
     "dev": {
@@ -90,7 +104,7 @@ Simply append a new entry to `repositories.json`:
 }
 ```
 
-Then run:
+Then apply changes:
 ```bash
 terraform apply
 ```

@@ -20,7 +20,7 @@ locals {
       visibility         = try(repo.visibility, "private")
       protected_branches = try(repo.protected_branches, ["main", "dev"])
       required_approvals = try(repo.required_approvals, 1)
-      status_checks      = try(repo.status_checks, ["Terraform Unit Tests", "Terraform Plan"])
+      prod_approvers     = try(repo.prod_approvers, [])
       topics             = try(repo.topics, ["terraform"])
       environments = {
         for env_name, env_cfg in repo.environments : env_name => {

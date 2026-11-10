@@ -24,11 +24,16 @@ output "protected_branches" {
   }
 }
 
-output "prod_approval_gate" {
-  description = "Designated reviewer gate enforced on all 'prod' deployment environments."
+output "prod_approval_gates" {
+  description = "Designated reviewer gate enforced on 'prod' deployment environments per repository from repositories.json."
   value = {
-    approver_email    = var.prod_approver_email
-    approver_username = var.prod_approver_username
-    policy            = "Required approval before production deployment. Administrators cannot bypass."
+    for name, repo in local.active_repositories : name => [
+      for approver in try(repo.prod_approvers, []) : "${approver.username} (${approver.email})"
+    ]
   }
+}
+
+output "pipeline_status_checks_policy" {
+  description = "Architecture policy on branch protection status checks."
+  value       = "Status checks are decoupled from branch protection so each repository can execute its own distinct CI/CD pipeline without Terraform coupling."
 }

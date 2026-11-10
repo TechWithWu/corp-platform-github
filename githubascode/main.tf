@@ -3,20 +3,31 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # 1. Loads repository definitions from the decoupled /githubascode/repositories.json catalog
 # 2. Blocks direct commits to both 'main' and 'dev' (enforces Pull Requests & Code Owners)
-# 3. Requires designated reviewer approval (seniorguy@gmail.com) for the 'prod' deployment environment
+# 3. Requires designated per-repository reviewer approvals for the 'prod' deployment environment
 # 4. Provisions 4 isolated environments: 'dev', 'qa', 'cae', and 'prod', each with dedicated Azure OIDC credentials
+# 5. Pipeline status checks are decoupled to allow each repository to define its own CI/CD workflow
 # ---------------------------------------------------------------------------------------------------------------------
 
-# Look up GitHub user ID for the designated reviewer (seniorguy@gmail.com)
-data "github_user" "approver" {
-  count    = var.prod_approver_user_id == null && var.prod_approver_username != "" ? 1 : 0
-  username = var.prod_approver_username
+locals {
+  # Collect all unique usernames of designated approvers across all repositories in the catalog
+  all_prod_approver_usernames = distinct(flatten([
+    for repo in local.active_repositories : [
+      for approver in try(repo.prod_approvers, []) : approver.username if try(approver.username, "") != ""
+    ]
+  ]))
+}
+
+# Dynamically look up GitHub numeric user IDs for each unique approver
+data "github_user" "approvers" {
+  for_each = toset(local.all_prod_approver_usernames)
+  username = each.value
 }
 
 locals {
-  resolved_reviewer_ids = var.prod_approver_user_id != null ? [var.prod_approver_user_id] : (
-    length(data.github_user.approver) > 0 ? [data.github_user.approver[0].id] : []
-  )
+  # Map username to resolved GitHub numeric user ID
+  approver_username_to_id = {
+    for username, user in data.github_user.approvers : username => user.id
+  }
 }
 
 module "repositories" {
@@ -29,17 +40,20 @@ module "repositories" {
   topics                 = coalesce(each.value.topics, ["terraform"])
 
   # 1. Multi-Branch Protection: Direct commits to 'main' & 'dev' are strictly BLOCKED
-  default_branch         = "main"
-  protected_branches     = coalesce(each.value.protected_branches, ["main", "dev"])
-  enforce_admins         = true
-  required_approvals     = coalesce(each.value.required_approvals, 1)
-  dismiss_stale_reviews  = true
+  # (Status checks omitted so each repository can freely execute its own custom pipeline)
+  default_branch             = "main"
+  protected_branches         = coalesce(each.value.protected_branches, ["main", "dev"])
+  enforce_admins             = true
+  required_approvals         = coalesce(each.value.required_approvals, 1)
+  dismiss_stale_reviews      = true
   require_code_owner_reviews = true
-  status_checks          = coalesce(each.value.status_checks, ["Terraform Unit Tests", "Terraform Plan"])
 
   # 2. Multi-Environment & Dedicated Azure OIDC Credentials ('dev', 'qa', 'cae', 'prod')
-  environments           = each.value.environments
+  environments = each.value.environments
 
-  # 3. Designated Approver for 'prod' environment (seniorguy@gmail.com)
-  prod_reviewer_ids      = local.resolved_reviewer_ids
+  # 3. Per-Repository Designated Approvers for 'prod' environment
+  prod_reviewer_ids = flatten([
+    for approver in try(each.value.prod_approvers, []) :
+    contains(keys(local.approver_username_to_id), try(approver.username, "")) ? [local.approver_username_to_id[approver.username]] : []
+  ])
 }

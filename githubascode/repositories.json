@@ -6,7 +6,12 @@
       "description": "Enterprise governance: Management Groups, Azure Policy, RBAC baselines, and subscription vending",
       "protected_branches": ["main"],
       "required_approvals": 1,
-      "status_checks": ["Terraform Unit Tests", "Terraform Plan"],
+      "prod_approvers": [
+        {
+          "email": "seniorguy@gmail.com",
+          "username": "seniorguy"
+        }
+      ],
       "topics": ["azure", "landing-zone", "management-groups", "policy"],
       "environments": {
         "prod": {
@@ -23,7 +28,12 @@
       "description": "Centralized Ops: Log Analytics, Sentinel, Azure Monitor, and alert policies",
       "protected_branches": ["main"],
       "required_approvals": 1,
-      "status_checks": ["Terraform Unit Tests", "Terraform Plan"],
+      "prod_approvers": [
+        {
+          "email": "ops-lead@gmail.com",
+          "username": "opslead"
+        }
+      ],
       "topics": ["azure", "operations", "sentinel", "monitor"],
       "environments": {
         "prod": {
@@ -40,7 +50,12 @@
       "description": "Centralized Networking: Hub VNet, Azure Firewall, VPN/ExpressRoute, and global NSG rules",
       "protected_branches": ["main"],
       "required_approvals": 1,
-      "status_checks": ["Terraform Unit Tests", "Terraform Plan"],
+      "prod_approvers": [
+        {
+          "email": "network-lead@gmail.com",
+          "username": "netlead"
+        }
+      ],
       "topics": ["azure", "networking", "firewall", "hub-spoke"],
       "environments": {
         "prod": {
@@ -57,7 +72,12 @@
       "description": "Billing Microservice API: invoice generation, payment gateways, and usage metering",
       "protected_branches": ["main", "dev"],
       "required_approvals": 1,
-      "status_checks": ["CI Build & Unit Tests", "Terraform Security Scan"],
+      "prod_approvers": [
+        {
+          "email": "seniorguy@gmail.com",
+          "username": "seniorguy"
+        }
+      ],
       "topics": ["microservice", "billing", "api", "azure-container-apps"],
       "environments": {
         "dev": {
@@ -92,7 +112,12 @@
       "description": "Billing Customer Portal: self-service invoicing and billing dashboard frontend",
       "protected_branches": ["main", "dev"],
       "required_approvals": 1,
-      "status_checks": ["Frontend Lint & Tests", "E2E Smoke Tests"],
+      "prod_approvers": [
+        {
+          "email": "billing-web-lead@gmail.com",
+          "username": "billingweblead"
+        }
+      ],
       "topics": ["frontend", "billing", "react", "azure-static-web-apps"],
       "environments": {
         "dev": {
@@ -127,7 +152,12 @@
       "description": "Product Catalog & Pricing Engine: high-performance product queries and pricing rules",
       "protected_branches": ["main", "dev"],
       "required_approvals": 1,
-      "status_checks": ["Unit Tests", "Integration Tests"],
+      "prod_approvers": [
+        {
+          "email": "product-architect@gmail.com",
+          "username": "productarchitect"
+        }
+      ],
       "topics": ["microservice", "catalog", "products", "api"],
       "environments": {
         "dev": {

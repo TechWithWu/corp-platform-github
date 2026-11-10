@@ -54,11 +54,6 @@ resource "github_branch_protection" "protection" {
     require_last_push_approval      = true
   }
 
-  required_status_checks {
-    strict   = true
-    contexts = var.status_checks
-  }
-
   depends_on = [
     github_repository.this,
     github_branch.additional_branches

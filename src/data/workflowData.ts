@@ -580,11 +580,7 @@ resource "github_branch_protection" "main" {
   pattern       = "main"
 
   enforce_admins = true
-
-  required_status_checks {
-    strict   = true
-    contexts = ["Terraform Unit Tests", "Terraform Plan"]
-  }
+  # Note: Status checks omitted to allow each repository to define its own pipeline!
 
   required_pull_request_reviews {
     dismiss_stale_reviews           = true
@@ -664,6 +660,7 @@ export interface PlatformRepoConfig {
   protectedBranches: string[];
   topics: string[];
   requiredApprovals: number;
+  prodApprovers?: { email: string; username: string }[];
   environments: Record<string, RepoEnvironment>;
 }
 
@@ -676,6 +673,12 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     protectedBranches: ['main'],
     topics: ['azure', 'landing-zone', 'management-groups', 'policy'],
     requiredApprovals: 1,
+    prodApprovers: [
+      {
+        email: 'seniorguy@gmail.com',
+        username: 'seniorguy',
+      },
+    ],
     environments: {
       prod: {
         azureClientId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
@@ -692,6 +695,12 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     protectedBranches: ['main'],
     topics: ['azure', 'operations', 'sentinel', 'monitor'],
     requiredApprovals: 1,
+    prodApprovers: [
+      {
+        email: 'ops-lead@gmail.com',
+        username: 'opslead',
+      },
+    ],
     environments: {
       prod: {
         azureClientId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
@@ -708,6 +717,12 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     protectedBranches: ['main'],
     topics: ['azure', 'networking', 'firewall', 'hub-spoke'],
     requiredApprovals: 1,
+    prodApprovers: [
+      {
+        email: 'network-lead@gmail.com',
+        username: 'netlead',
+      },
+    ],
     environments: {
       prod: {
         azureClientId: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
@@ -726,6 +741,12 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     protectedBranches: ['main', 'dev'],
     topics: ['microservice', 'billing', 'api', 'azure-container-apps'],
     requiredApprovals: 1,
+    prodApprovers: [
+      {
+        email: 'seniorguy@gmail.com',
+        username: 'seniorguy',
+      },
+    ],
     environments: {
       dev: {
         azureClientId: '10000000-0000-0000-0000-000000000001',
@@ -760,6 +781,12 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     protectedBranches: ['main', 'dev'],
     topics: ['frontend', 'billing', 'react', 'azure-static-web-apps'],
     requiredApprovals: 1,
+    prodApprovers: [
+      {
+        email: 'billing-web-lead@gmail.com',
+        username: 'billingweblead',
+      },
+    ],
     environments: {
       dev: {
         azureClientId: '10000000-0000-0000-0000-000000000011',
@@ -783,7 +810,7 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
         azureClientId: '20000000-0000-0000-0000-000000000011',
         azureTenantId: '11111111-1111-1111-1111-111111111111',
         azureSubscriptionId: '40000000-0000-0000-0000-000000000001',
-        scopeDescription: 'Billing Web Production Sub (Gate: seniorguy@gmail.com)',
+        scopeDescription: 'Billing Web Production Sub (Gate: billing-web-lead@gmail.com)',
       },
     },
   },
@@ -794,6 +821,12 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     protectedBranches: ['main', 'dev'],
     topics: ['microservice', 'catalog', 'products', 'api'],
     requiredApprovals: 1,
+    prodApprovers: [
+      {
+        email: 'product-architect@gmail.com',
+        username: 'productarchitect',
+      },
+    ],
     environments: {
       dev: {
         azureClientId: '10000000-0000-0000-0000-000000000021',
@@ -817,7 +850,7 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
         azureClientId: '20000000-0000-0000-0000-000000000021',
         azureTenantId: '11111111-1111-1111-1111-111111111111',
         azureSubscriptionId: '40000000-0000-0000-0000-000000000001',
-        scopeDescription: 'Products Production Workload Sub (Gate: seniorguy@gmail.com)',
+        scopeDescription: 'Products Production Workload Sub (Gate: product-architect@gmail.com)',
       },
     },
   },

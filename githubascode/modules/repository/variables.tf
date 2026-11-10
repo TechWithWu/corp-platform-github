@@ -58,11 +58,6 @@ variable "require_code_owner_reviews" {
   default     = true
 }
 
-variable "status_checks" {
-  description = "List of required status check contexts that must pass before merging."
-  type        = list(string)
-  default     = ["Terraform Unit Tests", "Terraform Plan"]
-}
 
 # Environments & Approvers
 variable "prod_reviewer_ids" {

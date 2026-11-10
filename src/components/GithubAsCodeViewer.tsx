@@ -34,12 +34,30 @@ export const GithubAsCodeViewer: React.FC = () => {
     protectedBranches: ['main', 'dev'],
     topics: ['microservice', 'orders', 'api'],
     requiredApprovals: 1,
+    prodApprovers: [
+      {
+        email: 'orders-lead@gmail.com',
+        username: 'orderslead',
+      },
+    ],
     environments: {
       dev: {
         azureClientId: '10000000-0000-0000-0000-000000000099',
         azureTenantId: '88888888-4444-4444-4444-121212121212',
         azureSubscriptionId: '30000000-0000-0000-0000-000000000099',
         scopeDescription: 'Orders Dev Workload Sub',
+      },
+      qa: {
+        azureClientId: '10000000-0000-0000-0000-000000000098',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000098',
+        scopeDescription: 'Orders QA Test Sub',
+      },
+      cae: {
+        azureClientId: '10000000-0000-0000-0000-000000000097',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000097',
+        scopeDescription: 'Orders CAE Staging Sub',
       },
       prod: {
         azureClientId: '20000000-0000-0000-0000-000000000099',
@@ -59,10 +77,49 @@ export const GithubAsCodeViewer: React.FC = () => {
     'repositories.json': `{
   "repositories": [
     {
+      "name": "corp-platform-foundation",
+      "type": "platform",
+      "description": "Enterprise governance: Management Groups, Azure Policy, RBAC baselines, and subscription vending",
+      "protected_branches": ["main"],
+      "required_approvals": 1,
+      "prod_approvers": [{ "email": "seniorguy@gmail.com", "username": "seniorguy" }],
+      "topics": ["azure", "landing-zone", "management-groups", "policy"],
+      "environments": {
+        "prod": { "azure_client_id": "00000000-0000-0000-0000-000000000001", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "22222222-2222-2222-2222-222222222221" }
+      }
+    },
+    {
+      "name": "corp-platform-management",
+      "type": "platform",
+      "description": "Centralized Ops: Log Analytics, Sentinel, Azure Monitor, and alert policies",
+      "protected_branches": ["main"],
+      "required_approvals": 1,
+      "prod_approvers": [{ "email": "ops-lead@gmail.com", "username": "opslead" }],
+      "topics": ["azure", "operations", "sentinel", "monitor"],
+      "environments": {
+        "prod": { "azure_client_id": "00000000-0000-0000-0000-000000000002", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "22222222-2222-2222-2222-222222222222" }
+      }
+    },
+    {
+      "name": "corp-platform-connectivity",
+      "type": "platform",
+      "description": "Centralized Networking: Hub VNet, Azure Firewall, VPN/ExpressRoute, and global NSG rules",
+      "protected_branches": ["main"],
+      "required_approvals": 1,
+      "prod_approvers": [{ "email": "network-lead@gmail.com", "username": "netlead" }],
+      "topics": ["azure", "networking", "firewall", "hub-spoke"],
+      "environments": {
+        "prod": { "azure_client_id": "00000000-0000-0000-0000-000000000003", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "22222222-2222-2222-2222-222222222223" }
+      }
+    },
+    {
       "name": "corp-billing-api",
       "type": "application",
-      "description": "Billing Microservice API",
+      "description": "Billing Microservice API: invoice generation, payment gateways, and usage metering",
       "protected_branches": ["main", "dev"],
+      "required_approvals": 1,
+      "prod_approvers": [{ "email": "seniorguy@gmail.com", "username": "seniorguy" }],
+      "topics": ["microservice", "billing", "api", "azure-container-apps"],
       "environments": {
         "dev": { "azure_client_id": "10000000-0000-0000-0000-000000000001", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000001" },
         "qa":  { "azure_client_id": "10000000-0000-0000-0000-000000000002", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000002" },
@@ -73,8 +130,11 @@ export const GithubAsCodeViewer: React.FC = () => {
     {
       "name": "corp-billing-web",
       "type": "application",
-      "description": "Billing Customer Portal Frontend",
+      "description": "Billing Customer Portal: self-service invoicing and billing dashboard frontend",
       "protected_branches": ["main", "dev"],
+      "required_approvals": 1,
+      "prod_approvers": [{ "email": "billing-web-lead@gmail.com", "username": "billingweblead" }],
+      "topics": ["frontend", "billing", "react", "azure-static-web-apps"],
       "environments": {
         "dev": { "azure_client_id": "10000000-0000-0000-0000-000000000011", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000001" },
         "qa":  { "azure_client_id": "10000000-0000-0000-0000-000000000012", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000002" },
@@ -85,8 +145,11 @@ export const GithubAsCodeViewer: React.FC = () => {
     {
       "name": "corp-products-api",
       "type": "application",
-      "description": "Product Catalog & Pricing Engine API",
+      "description": "Product Catalog & Pricing Engine: high-performance product queries and pricing rules",
       "protected_branches": ["main", "dev"],
+      "required_approvals": 1,
+      "prod_approvers": [{ "email": "product-architect@gmail.com", "username": "productarchitect" }],
+      "topics": ["microservice", "catalog", "products", "api"],
       "environments": {
         "dev": { "azure_client_id": "10000000-0000-0000-0000-000000000021", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000001" },
         "qa":  { "azure_client_id": "10000000-0000-0000-0000-000000000022", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000002" },
@@ -110,7 +173,7 @@ locals {
       visibility         = try(repo.visibility, "private")
       protected_branches = try(repo.protected_branches, ["main", "dev"])
       required_approvals = try(repo.required_approvals, 1)
-      status_checks      = try(repo.status_checks, ["Terraform Unit Tests", "Terraform Plan"])
+      prod_approvers     = try(repo.prod_approvers, [])
       topics             = try(repo.topics, ["terraform"])
       environments = {
         for env_name, env_cfg in repo.environments : env_name => {
@@ -126,19 +189,28 @@ locals {
 }
 `,
     'main.tf': `# /githubascode/main.tf
-# 1. Resolve designated reviewer (seniorguy@gmail.com)
-data "github_user" "approver" {
-  count    = var.prod_approver_user_id == null && var.prod_approver_username != "" ? 1 : 0
-  username = var.prod_approver_username
+# 1. Collect all unique approver usernames across repositories
+locals {
+  all_prod_approver_usernames = distinct(flatten([
+    for repo in local.active_repositories : [
+      for approver in try(repo.prod_approvers, []) : approver.username if try(approver.username, "") != ""
+    ]
+  ]))
+}
+
+# 2. Dynamically look up GitHub numeric user IDs for each unique approver
+data "github_user" "approvers" {
+  for_each = toset(local.all_prod_approver_usernames)
+  username = each.value
 }
 
 locals {
-  resolved_reviewer_ids = var.prod_approver_user_id != null ? [var.prod_approver_user_id] : (
-    length(data.github_user.approver) > 0 ? [data.github_user.approver[0].id] : []
-  )
+  approver_username_to_id = {
+    for username, user in data.github_user.approvers : username => user.id
+  }
 }
 
-# 2. Instantiate repository module for all catalog entries
+# 3. Instantiate repository module for all catalog entries
 module "repositories" {
   source   = "./modules/repository"
   for_each = local.active_repositories
@@ -149,41 +221,48 @@ module "repositories" {
   topics                 = coalesce(each.value.topics, ["terraform"])
 
   # Direct commits to both 'main' and 'dev' are BLOCKED (mandatory PR + Code Owners)
-  default_branch         = "main"
-  protected_branches     = coalesce(each.value.protected_branches, ["main", "dev"])
-  enforce_admins         = true
-  required_approvals     = coalesce(each.value.required_approvals, 1)
-  dismiss_stale_reviews  = true
+  # Status checks are omitted so each repository can execute its own distinct CI/CD pipeline!
+  default_branch             = "main"
+  protected_branches         = coalesce(each.value.protected_branches, ["main", "dev"])
+  enforce_admins             = true
+  required_approvals         = coalesce(each.value.required_approvals, 1)
+  dismiss_stale_reviews      = true
   require_code_owner_reviews = true
-  status_checks          = coalesce(each.value.status_checks, ["Terraform Unit Tests", "Terraform Plan"])
 
   # Provision 4 environments (dev, qa, cae, prod) with dedicated Azure OIDC
-  environments           = each.value.environments
+  environments = each.value.environments
 
-  # Approver gate for 'prod' (seniorguy@gmail.com, admins cannot bypass)
-  prod_reviewer_ids      = local.resolved_reviewer_ids
+  # Approver gate for 'prod' resolved per repository from repositories.json
+  prod_reviewer_ids = flatten([
+    for approver in try(each.value.prod_approvers, []) :
+    contains(keys(local.approver_username_to_id), try(approver.username, "")) ? [local.approver_username_to_id[approver.username]] : []
+  ])
 }
 `,
     'variables.tf': `# /githubascode/variables.tf
-variable "prod_approver_email" {
-  type    = string
-  default = "seniorguy@gmail.com"
-}
-
-variable "prod_approver_username" {
-  type    = string
-  default = "seniorguy"
-}
-
-variable "prod_approver_user_id" {
-  type    = number
-  default = null
-}
+# Production environment approvers are decoupled into /githubascode/repositories.json
+# because approvers differ across repositories. Status checks are omitted from branch
+# protection to allow each repository to define its own pipeline.
 
 variable "repositories" {
   description = "Optional override map. Defaults to empty {} to auto-load /githubascode/repositories.json"
-  type        = any
-  default     = {}
+  type = map(object({
+    description        = string
+    visibility         = optional(string, "private")
+    protected_branches = optional(list(string), ["main", "dev"])
+    topics             = optional(list(string), ["terraform"])
+    required_approvals = optional(number, 1)
+    prod_approvers     = optional(list(object({
+      email    = string
+      username = string
+    })), [])
+    environments       = map(object({
+      azure_client_id       = string
+      azure_tenant_id       = string
+      azure_subscription_id = string
+    }))
+  }))
+  default = {}
 }
 `,
     'provider.tf': `# /githubascode/provider.tf
@@ -216,16 +295,20 @@ output "provisioned_environments" {
   value = { for name, repo in module.repositories : name => repo.environments }
 }
 
-output "prod_approval_gate" {
+output "protected_branches" {
+  value = { for name, repo in module.repositories : name => repo.protected_branches }
+}
+
+output "prod_approval_gates" {
   value = {
-    approver_email    = var.prod_approver_email
-    approver_username = var.prod_approver_username
-    policy            = "Required approval before production deployment. Admins cannot bypass."
+    for name, repo in local.active_repositories : name => [
+      for approver in try(repo.prod_approvers, []) : "\${approver.username} (\${approver.email})"
+    ]
   }
 }
 
-output "protected_branches" {
-  value = { for name, repo in module.repositories : name => repo.protected_branches }
+output "pipeline_status_checks_policy" {
+  value = "Status checks are decoupled from branch protection so each repository can execute its own distinct CI/CD pipeline without Terraform coupling."
 }
 `,
     'terraform.tfvars.example': `# /githubascode/terraform.tfvars.example
@@ -241,8 +324,12 @@ ${repos
     visibility         = "private"
     protected_branches = [${r.protectedBranches.map((b) => `"${b}"`).join(', ')}]
     required_approvals = ${r.requiredApprovals}
-    status_checks      = ["Terraform Unit Tests", "Terraform Plan"]
     topics             = [${r.topics.map((t) => `"${t}"`).join(', ')}]
+    prod_approvers = [
+${(r.prodApprovers || [{ email: 'seniorguy@gmail.com', username: 'seniorguy' }])
+  .map((a) => `      { email = "${a.email}", username = "${a.username}" }`)
+  .join(',\n')}
+    ]
     environments = {
 ${Object.entries(r.environments)
   .map(
@@ -296,6 +383,8 @@ resource "github_branch" "additional_branches" {
 }
 
 # 3. Apply Strict Branch Protection to All Protected Branches ('main', 'dev', etc.)
+# Rule: Neither 'main' nor 'dev' can be committed to directly; all changes MUST arrive via PR!
+# Note: Status checks omitted to allow each repository to define its own pipeline!
 resource "github_branch_protection" "protection" {
   for_each = toset(var.protected_branches)
 
@@ -314,23 +403,28 @@ resource "github_branch_protection" "protection" {
     require_last_push_approval      = true
   }
 
-  required_status_checks {
-    strict   = true
-    contexts = var.status_checks
-  }
-
   depends_on = [
     github_repository.this,
     github_branch.additional_branches
   ]
 }
 
-# 4. Provision Environments (e.g. 'dev' and 'prod')
+# 4. Provision Environments ('dev', 'qa', 'cae', 'prod') with Approver Gates
 resource "github_repository_environment" "environments" {
   for_each          = var.environments
   repository        = github_repository.this.name
   environment       = each.key
-  can_admins_bypass = true
+  
+  # For 'prod', admins cannot bypass approval gates
+  can_admins_bypass = each.key == "prod" ? false : true
+
+  # Reviewer approval gate enforced per repository on 'prod' environment
+  dynamic "reviewers" {
+    for_each = each.key == "prod" && length(var.prod_reviewer_ids) > 0 ? [1] : []
+    content {
+      users = var.prod_reviewer_ids
+    }
+  }
 
   depends_on = [github_repository.this]
 }
@@ -385,7 +479,7 @@ variable "enforce_admins" { type = bool; default = true }
 variable "required_approvals" { type = number; default = 1 }
 variable "dismiss_stale_reviews" { type = bool; default = true }
 variable "require_code_owner_reviews" { type = bool; default = true }
-variable "status_checks" { type = list(string); default = ["Terraform Unit Tests", "Terraform Plan"] }
+variable "prod_reviewer_ids" { type = list(number); default = [] }
 variable "environments" {
   type = map(object({
     azure_client_id       = string
@@ -443,23 +537,23 @@ output "protected_branches" { value = [for p in github_branch_protection.protect
               GitHub-as-Code Enterprise Governance (Platform & Application Repositories)
             </div>
             <h2 className="text-xl font-bold text-slate-100">
-              Dev Protection, Prod Reviewer Gate & 4-Tier OIDC Environments
+              Per-Repo Approver Gates, dev Protection & Autonomous CI/CD Pipelines
             </h2>
             <p className="text-slate-400 text-xs mt-1 max-w-3xl leading-relaxed">
-              Enforces <strong>no direct commits to dev</strong>, requires designated approval from <strong>seniorguy@gmail.com</strong> for prod, provisions <strong>dev, qa, cae, prod</strong> with dedicated Azure OIDC, and manages hundreds of repositories via a separate <strong>repositories.json</strong> catalog.
+              Enforces <strong>no direct commits to dev</strong>, requires <strong>designated per-repository approvers</strong> for prod from <strong>repositories.json</strong>, provisions <strong>dev, qa, cae, prod</strong> with dedicated Azure OIDC, and leaves <strong>status checks flexible</strong> for each repo's unique pipeline.
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-2.5 text-[11px] font-mono">
               <span className="bg-rose-950/60 text-rose-300 border border-rose-800/80 px-2 py-0.5 rounded">
                 ✓ dev Direct Commits Blocked
               </span>
               <span className="bg-emerald-950/60 text-emerald-300 border border-emerald-800/80 px-2 py-0.5 rounded">
-                ✓ prod Gate: seniorguy@gmail.com
+                ✓ Per-Repo Prod Approvers
+              </span>
+              <span className="bg-indigo-950/60 text-indigo-300 border border-indigo-800/80 px-2 py-0.5 rounded">
+                ✓ Status Checks Decoupled
               </span>
               <span className="bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 px-2 py-0.5 rounded">
                 ✓ 4 Envs: dev, qa, cae, prod
-              </span>
-              <span className="bg-indigo-950/60 text-indigo-300 border border-indigo-800/80 px-2 py-0.5 rounded">
-                ✓ Decoupled repositories.json Catalog
               </span>
             </div>
           </div>
@@ -571,6 +665,25 @@ output "protected_branches" { value = [for p in github_branch_protection.protect
                       </span>
                     ))}
                   </div>
+                </div>
+
+                {/* Prod Approver Gate */}
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 flex items-center gap-1 font-mono text-[10px]">
+                    <Shield className="w-3 h-3 text-emerald-400" />
+                    Prod Approver:
+                  </span>
+                  <span className="bg-emerald-950/60 text-emerald-300 border border-emerald-800/80 px-1.5 py-0.5 rounded font-mono text-[10px]">
+                    {repo.prodApprovers?.[0]?.email || 'seniorguy@gmail.com'}
+                  </span>
+                </div>
+
+                {/* Pipeline Status Checks Policy */}
+                <div className="flex items-center justify-between text-[10px] font-mono">
+                  <span className="text-slate-500">Status Checks:</span>
+                  <span className="text-cyan-400/90 bg-cyan-950/40 border border-cyan-800/60 px-1.5 py-0.2 rounded text-[9px]">
+                    Autonomous (Per Repo)
+                  </span>
                 </div>
 
                 {/* Provisioned Environments & OIDC Credentials */}
@@ -772,6 +885,49 @@ output "protected_branches" { value = [for p in github_branch_protection.protect
                   onChange={(e) => setNewRepo({ ...newRepo, description: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-slate-300 block mb-1 font-medium">Prod Approver Email</label>
+                  <input
+                    type="email"
+                    value={newRepo.prodApprovers?.[0]?.email || ''}
+                    onChange={(e) =>
+                      setNewRepo({
+                        ...newRepo,
+                        prodApprovers: [
+                          {
+                            email: e.target.value,
+                            username: newRepo.prodApprovers?.[0]?.username || e.target.value.split('@')[0],
+                          },
+                        ],
+                      })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono text-[11px]"
+                    placeholder="lead@company.com"
+                  />
+                </div>
+                <div>
+                  <label className="text-slate-300 block mb-1 font-medium">Prod Approver GitHub User</label>
+                  <input
+                    type="text"
+                    value={newRepo.prodApprovers?.[0]?.username || ''}
+                    onChange={(e) =>
+                      setNewRepo({
+                        ...newRepo,
+                        prodApprovers: [
+                          {
+                            email: newRepo.prodApprovers?.[0]?.email || `${e.target.value}@gmail.com`,
+                            username: e.target.value,
+                          },
+                        ],
+                      })
+                    }
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono text-[11px]"
+                    placeholder="leaduser"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
