@@ -273,14 +273,36 @@ terraform {
       source  = "integrations/github"
       version = "~> 6.0"
     }
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 3.0"
+    }
+  }
+
+  # Azure Storage Account Remote State Backend
+  # Stores the Terraform state file securely with state locking in an Azure Blob Storage container.
+  # Leverages Azure Workload Identity / OIDC (use_oidc = true) via ARM_* environment variables
+  # passed by GitHub Actions without requiring long-lived storage account access keys.
+  backend "azurerm" {
+    resource_group_name  = "rg-terraform-state-prod"
+    storage_account_name = "stcorpghasstateprod"
+    container_name       = "tfstate"
+    key                  = "githubascode.tfstate"
+    use_oidc             = true
   }
 }
 
 # The GitHub provider automatically discovers authentication and target scope from standard
-# temporary environment variables without hardcoded inputs or variable declarations:
+# environment variables without hardcoded inputs or variable declarations:
 # - GITHUB_TOKEN : Built-in runner token (\${{ secrets.GITHUB_TOKEN }} or \${{ secrets.ADMIN_GITHUB_TOKEN }})
 # - GITHUB_OWNER : Built-in organization/owner context (\${{ github.repository_owner }})
 provider "github" {}
+
+# Optional AzureRM provider for supplemental Azure resource operations using OIDC
+provider "azurerm" {
+  features {}
+  use_oidc = true
+}
 `,
     'outputs.tf': `# /githubascode/outputs.tf
 output "total_repositories_count" {
@@ -494,6 +516,216 @@ output "html_url" { value = github_repository.this.html_url }
 output "git_clone_url" { value = github_repository.this.git_clone_url }
 output "environments" { value = [for e in github_repository_environment.environments : e.environment] }
 output "protected_branches" { value = [for p in github_branch_protection.protection : p.pattern] }
+`,
+    '.github/workflows/gac.yml': `# /.github/workflows/gac.yml
+name: 'GitHub-as-Code (GAC) - Test, Plan & Apply'
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'githubascode/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'githubascode/**'
+  workflow_dispatch:
+
+# Ensure only one Terraform execution runs at a time per ref; never cancel running jobs mid-state!
+concurrency:
+  group: gac-terraform-\${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  id-token: write        # Required for Azure OIDC login and Azure Blob Storage state backend access
+  contents: read         # Required to check out repository code
+  pull-requests: write   # Required to post plan output to PR comments
+  issues: write          # Required for GitHub Script REST API commenting
+
+env:
+  ARM_CLIENT_ID: \${{ secrets.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: \${{ secrets.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: \${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: true
+  GITHUB_TOKEN: \${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+  GITHUB_OWNER: \${{ github.repository_owner }}
+  TF_IN_AUTOMATION: 'true'
+
+jobs:
+  terraform-test-and-plan:
+    name: 'Terraform Test & Plan'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: githubascode
+
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Setup Terraform CLI'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+          terraform_wrapper: false
+
+      - name: 'Azure CLI Login (OIDC Passwordless)'
+        uses: azure/login@v2
+        with:
+          client-id: \${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: \${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: \${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: 'Terraform Format Check'
+        id: fmt
+        run: terraform fmt -check
+
+      - name: 'Terraform Init (Azure Storage State Backend)'
+        id: init
+        run: terraform init
+
+      - name: 'Terraform Validate'
+        id: validate
+        run: terraform validate
+
+      - name: 'Terraform Test'
+        id: test
+        run: |
+          echo "Executing native Terraform test suites..."
+          terraform test
+
+      - name: 'Terraform Plan'
+        id: plan
+        run: |
+          terraform plan -no-color -out=tfplan > plan.out
+          cat plan.out
+
+      - name: 'Format Plan Summary'
+        id: plan-summary
+        run: |
+          PLAN_CONTENT=$(cat plan.out)
+          delimiter="$(openssl rand -hex 8)"
+          echo "summary<<\${delimiter}" >> $GITHUB_OUTPUT
+          echo "### 🚀 GitHub-as-Code Terraform Plan Output" >> $GITHUB_OUTPUT
+          echo "> **Branch**: \\\`\${{ github.ref_name }}\\\` | **Commit**: \\\`\${{ github.sha }}\\\`" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "<details><summary>Click to view complete plan</summary>" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo '\`\`\`hcl' >> $GITHUB_OUTPUT
+          echo "$PLAN_CONTENT" >> $GITHUB_OUTPUT
+          echo '\`\`\`' >> $GITHUB_OUTPUT
+          echo "</details>" >> $GITHUB_OUTPUT
+          echo "\${delimiter}" >> $GITHUB_OUTPUT
+
+      - name: 'Publish Plan to Task Summary'
+        env:
+          SUMMARY: \${{ steps.plan-summary.outputs.summary }}
+        run: |
+          echo "$SUMMARY" >> $GITHUB_STEP_SUMMARY
+
+      - name: 'Push Plan Output to Pull Request'
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          SUMMARY: \${{ steps.plan-summary.outputs.summary }}
+        with:
+          github-token: \${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const body = process.env.SUMMARY;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: 'Archive Terraform Plan Artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gac-tfplan
+          path: githubascode/tfplan
+          retention-days: 7
+          if-no-files-found: error
+
+  terraform-apply:
+    name: 'Terraform Apply (Requires Approval)'
+    needs: [terraform-test-and-plan]
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    # GitHub Environment protection rule pauses execution and waits for designated approvers to approve
+    environment: production
+    defaults:
+      run:
+        working-directory: githubascode
+
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Setup Terraform CLI'
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.0
+          terraform_wrapper: false
+
+      - name: 'Azure CLI Login (OIDC Passwordless)'
+        uses: azure/login@v2
+        with:
+          client-id: \${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: \${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: \${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: 'Download Planned Artifact'
+        uses: actions/download-artifact@v4
+        with:
+          name: gac-tfplan
+          path: githubascode
+
+      - name: 'Terraform Init (Azure Storage State Backend)'
+        run: terraform init
+
+      - name: 'Terraform Apply Approved Plan'
+        id: apply
+        run: |
+          echo "Approver review completed. Applying pre-computed plan..."
+          terraform apply -auto-approve tfplan
+
+      - name: 'Publish Apply Report to Summary'
+        if: always()
+        run: |
+          cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+          ## ✅ GitHub-as-Code Terraform Apply Completed
+
+          - **Environment**: \\\`production\\\` (Approved by designated gatekeepers)
+          - **Trigger**: \\\`\${{ github.event_name }}\\\` on \\\`\${{ github.ref_name }}\\\`
+          - **Commit**: \\\`\${{ github.sha }}\\\`
+          - **Status**: Finished applying verified Terraform plan.
+          EOF
+`,
+    'tests/repository_validation.tftest.hcl': `# /githubascode/tests/repository_validation.tftest.hcl
+# Native Terraform 1.6+ Unit & Integration Test Suite
+# Executed via \`terraform test\` in the CI/CD pipeline
+
+run "verify_repositories_catalog_loaded" {
+  command = plan
+
+  assert {
+    condition     = length(local.active_repositories) > 0
+    error_message = "Active repositories catalog must contain at least one repository."
+  }
+
+  assert {
+    condition     = contains(keys(local.active_repositories), "corp-platform-foundation")
+    error_message = "corp-platform-foundation must exist in active repositories."
+  }
+
+  assert {
+    condition     = contains(keys(local.active_repositories), "corp-billing-api")
+    error_message = "corp-billing-api must exist in active repositories."
+  }
+}
 `,
   };
 
@@ -774,6 +1006,30 @@ output "protected_branches" { value = [for p in github_branch_protection.protect
                 {selectedFile === file && <ChevronRight className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
               </button>
             ))}
+
+            <div className="text-[11px] text-slate-500 font-mono px-2 pt-3 pb-1">
+              CI/CD Pipeline & Tests
+            </div>
+            {[
+              '.github/workflows/gac.yml',
+              'tests/repository_validation.tftest.hcl',
+            ].map((file) => (
+              <button
+                key={file}
+                onClick={() => setSelectedFile(file)}
+                className={`w-full text-left px-3 py-1.5 rounded-lg flex items-center justify-between font-mono text-[11px] transition-colors ${
+                  selectedFile === file
+                    ? 'bg-cyan-950/70 text-cyan-300 border border-cyan-800/80'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                }`}
+              >
+                <span className="flex items-center gap-2 truncate">
+                  <FileCode className={`w-3.5 h-3.5 ${file.endsWith('.yml') ? 'text-emerald-400' : 'text-amber-400'}`} />
+                  {file.replace('.github/workflows/', '')}
+                </span>
+                {selectedFile === file && <ChevronRight className="w-3.5 h-3.5 text-cyan-400 shrink-0" />}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -782,7 +1038,7 @@ output "protected_branches" { value = [for p in github_branch_protection.protect
           <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800">
             <div className="flex items-center gap-2 text-xs font-mono font-semibold text-slate-200">
               <span className="w-2 h-2 rounded-full bg-cyan-400" />
-              <span>githubascode/{selectedFile}</span>
+              <span>{selectedFile.startsWith('.') ? selectedFile : `githubascode/${selectedFile}`}</span>
             </div>
 
             <div className="flex items-center gap-2">

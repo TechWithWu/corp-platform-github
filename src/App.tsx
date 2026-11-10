@@ -160,14 +160,17 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-2">
+            <span className="text-slate-500">CI/CD:</span>
+            <span className="text-cyan-400 font-mono">.github/workflows/gac.yml</span>
+            <span className="text-slate-600">·</span>
+            <span className="text-slate-500">tfstate Backend:</span>
+            <span className="text-emerald-400 font-mono">Azure Storage (azurerm)</span>
+            <span className="text-slate-600">·</span>
             <span className="text-slate-500">dev Branch:</span>
-            <span className="text-rose-400 font-mono">No Direct Push</span>
+            <span className="text-rose-400 font-mono">PR Only</span>
             <span className="text-slate-600">·</span>
-            <span className="text-slate-500">prod Approver:</span>
-            <span className="text-emerald-400 font-mono">seniorguy@gmail.com</span>
-            <span className="text-slate-600">·</span>
-            <span className="text-slate-500">Environments:</span>
-            <span className="text-cyan-400 font-mono">dev · qa · cae · prod</span>
+            <span className="text-slate-500">prod Gate:</span>
+            <span className="text-amber-400 font-mono">Manual Approval</span>
           </div>
         </div>
 
