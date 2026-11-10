@@ -1,33 +1,30 @@
 # ---------------------------------------------------------------------------------------------------------------------
-# GITHUB-AS-CODE: ENTERPRISE PLATFORM REPOSITORIES & AZURE OIDC FEDERATION
+# GITHUB-AS-CODE: PLATFORM & APPLICATION REPOSITORIES ORCHESTRATION
 # ---------------------------------------------------------------------------------------------------------------------
-# This configuration creates the platform engineering repositories, enforces strict branch protection
-# on 'main', provisions the 'prod' deployment environment, and injects dedicated Azure OIDC credentials
-# into each repository's environment secrets.
+# Instantiates module.repository for each repository:
+# - Supports both single-branch/prod platform repos AND dual-branch (main, dev) / dual-env (dev, prod) app repos.
+# - Enforces strict branch protection across all configured protected branches.
+# - Injects dedicated Azure OIDC credentials into each repository's corresponding environment secrets.
 # ---------------------------------------------------------------------------------------------------------------------
 
-module "platform_repositories" {
+module "repositories" {
   source   = "./modules/repository"
   for_each = var.repositories
 
   name                   = each.key
   description            = each.value.description
   visibility             = coalesce(each.value.visibility, "private")
-  topics                 = coalesce(each.value.topics, ["terraform", "azure-platform"])
+  topics                 = coalesce(each.value.topics, ["terraform"])
 
-  # 1. Strict Branch Protection Policy
-  target_branch          = "main"
+  # 1. Multi-Branch Protection ('main', 'dev', etc.)
+  default_branch         = "main"
+  protected_branches     = coalesce(each.value.protected_branches, ["main"])
   enforce_admins         = true
   required_approvals     = coalesce(each.value.required_approvals, 1)
   dismiss_stale_reviews  = true
   require_code_owner_reviews = true
   status_checks          = coalesce(each.value.status_checks, ["Terraform Unit Tests", "Terraform Plan"])
 
-  # 2. Dedicated GitHub Environment
-  environment_name       = "prod"
-
-  # 3. Dedicated Azure OIDC Credentials per repository
-  azure_client_id        = each.value.azure_client_id
-  azure_tenant_id        = each.value.azure_tenant_id
-  azure_subscription_id = each.value.azure_subscription_id
+  # 2. Multi-Environment & Dedicated Azure OIDC Credentials ('dev', 'prod')
+  environments           = each.value.environments
 }

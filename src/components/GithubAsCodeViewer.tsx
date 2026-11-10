@@ -15,6 +15,9 @@ import {
   CheckCircle2,
   Layers,
   Lock,
+  GitBranch,
+  Server,
+  Code2,
 } from 'lucide-react';
 import { DEFAULT_PLATFORM_REPOS, PlatformRepoConfig } from '../data/workflowData';
 
@@ -22,63 +25,82 @@ export const GithubAsCodeViewer: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<string>('main.tf');
   const [copiedFile, setCopiedFile] = useState<string | null>(null);
   const [repos, setRepos] = useState<PlatformRepoConfig[]>(DEFAULT_PLATFORM_REPOS);
+  const [filterType, setFilterType] = useState<'all' | 'platform' | 'application'>('all');
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [newRepo, setNewRepo] = useState<PlatformRepoConfig>({
-    name: 'corp-platform-identity',
-    description: 'Centralized Identity: Entra ID custom domain, PIM, Conditional Access policies',
-    azureClientId: 'd4e5f6a7-b8c9-0123-def4-567890123456',
-    azureTenantId: '88888888-4444-4444-4444-121212121212',
-    azureSubscriptionId: '44444444-5555-6666-7777-888888888888',
-    scope: 'Identity Subscription (sub-corp-identity)',
-    topics: ['azure', 'identity', 'entra', 'pim'],
+    name: 'corp-orders-api',
+    type: 'application',
+    description: 'Orders Processing Service: checkout flow and fulfillment integration',
+    protectedBranches: ['main', 'dev'],
+    topics: ['microservice', 'orders', 'api'],
     requiredApprovals: 1,
+    environments: {
+      dev: {
+        azureClientId: '10000000-0000-0000-0000-000000000099',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000099',
+        scopeDescription: 'Orders Dev Workload Sub',
+      },
+      prod: {
+        azureClientId: '20000000-0000-0000-0000-000000000099',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '40000000-0000-0000-0000-000000000099',
+        scopeDescription: 'Orders Production Workload Sub',
+      },
+    },
+  });
+
+  const filteredRepos = repos.filter((r) => {
+    if (filterType === 'all') return true;
+    return r.type === filterType;
   });
 
   const filesContent: Record<string, string> = {
     'main.tf': `# /githubascode/main.tf
-module "platform_repositories" {
+# ---------------------------------------------------------------------------------------------------------------------
+# GITHUB-AS-CODE: PLATFORM & APPLICATION REPOSITORIES ORCHESTRATION
+# ---------------------------------------------------------------------------------------------------------------------
+module "repositories" {
   source   = "./modules/repository"
   for_each = var.repositories
 
   name                   = each.key
   description            = each.value.description
   visibility             = coalesce(each.value.visibility, "private")
-  topics                 = coalesce(each.value.topics, ["terraform", "azure-platform"])
+  topics                 = coalesce(each.value.topics, ["terraform"])
 
-  # 1. Strict Branch Protection Policy
-  target_branch          = "main"
+  # 1. Multi-Branch Protection ('main', 'dev', etc.)
+  default_branch         = "main"
+  protected_branches     = coalesce(each.value.protected_branches, ["main"])
   enforce_admins         = true
   required_approvals     = coalesce(each.value.required_approvals, 1)
   dismiss_stale_reviews  = true
   require_code_owner_reviews = true
   status_checks          = coalesce(each.value.status_checks, ["Terraform Unit Tests", "Terraform Plan"])
 
-  # 2. Dedicated GitHub Environment
-  environment_name       = "prod"
-
-  # 3. Dedicated Azure OIDC Credentials per repository
-  azure_client_id        = each.value.azure_client_id
-  azure_tenant_id        = each.value.azure_tenant_id
-  azure_subscription_id = each.value.azure_subscription_id
+  # 2. Multi-Environment & Dedicated Azure OIDC Credentials ('dev', 'prod')
+  environments           = each.value.environments
 }
 `,
     'variables.tf': `# /githubascode/variables.tf
-# Note: github_token and github_owner are NOT declared here.
-# The GitHub provider natively reads the default temporary runner environment variables:
-# - GITHUB_TOKEN (built-in runner token: \${{ secrets.GITHUB_TOKEN }})
-# - GITHUB_OWNER (built-in runner owner context: \${{ github.repository_owner }})
+# Note: provider "github" {} natively reads temporary runner environment variables:
+#   GITHUB_TOKEN = \${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+#   GITHUB_OWNER = \${{ github.repository_owner }}
 
 variable "repositories" {
-  description = "Map of platform repositories to provision, each with dedicated Azure OIDC credentials."
+  description = "Map of all repositories to provision with their branch protection rules and environment-specific Azure OIDC credentials."
   type = map(object({
-    description           = string
-    visibility            = optional(string, "private")
-    azure_client_id       = string
-    azure_tenant_id       = string
-    azure_subscription_id = string
-    required_approvals    = optional(number, 1)
-    status_checks         = optional(list(string), ["Terraform Unit Tests", "Terraform Plan"])
-    topics                = optional(list(string), ["terraform", "azure-landing-zone"])
+    description        = string
+    visibility         = optional(string, "private")
+    protected_branches = optional(list(string), ["main"])
+    topics             = optional(list(string), ["terraform"])
+    required_approvals = optional(number, 1)
+    status_checks      = optional(list(string), ["Terraform Unit Tests", "Terraform Plan"])
+    environments       = map(object({
+      azure_client_id       = string
+      azure_tenant_id       = string
+      azure_subscription_id = string
+    }))
   }))
 }
 `,
@@ -95,7 +117,7 @@ terraform {
 
 # The GitHub provider automatically discovers authentication and target scope from standard
 # temporary environment variables without hardcoded inputs or variable declarations:
-# - GITHUB_TOKEN : Built-in runner token (\${{ secrets.GITHUB_TOKEN }})
+# - GITHUB_TOKEN : Built-in runner token (\${{ secrets.GITHUB_TOKEN }} or \${{ secrets.ADMIN_GITHUB_TOKEN }})
 # - GITHUB_OWNER : Built-in organization/owner context (\${{ github.repository_owner }})
 provider "github" {}
 `,
@@ -103,49 +125,50 @@ provider "github" {}
 output "repository_urls" {
   description = "Map of created repository names to their GitHub HTML URLs."
   value = {
-    for name, repo in module.platform_repositories : name => repo.html_url
+    for name, repo in module.repositories : name => repo.html_url
   }
 }
 
 output "provisioned_environments" {
-  description = "The target deployment environment provisioned per repository."
+  description = "Map of repository names to their provisioned deployment environments."
   value = {
-    for name, repo in module.platform_repositories : name => repo.environment_name
+    for name, repo in module.repositories : name => repo.environments
   }
 }
 
-output "security_audit_summary" {
-  description = "Audit summary of security protections and OIDC secrets provisioned."
+output "protected_branches" {
+  description = "Map of repository names to their protected branch patterns."
   value = {
-    for name, config in var.repositories : name => {
-      branch_protection     = "Enforced on 'main' (Admins strictly enforced, linear history required)"
-      required_reviews      = config.required_approvals
-      environment           = "prod"
-      azure_client_id_set   = config.azure_client_id != ""
-      azure_tenant_id_set   = config.azure_tenant_id != ""
-      azure_subscription_set = config.azure_subscription_id != ""
-    }
+    for name, repo in module.repositories : name => repo.protected_branches
   }
 }
 `,
     'terraform.tfvars.example': `# /githubascode/terraform.tfvars.example
-# Notice: github_owner and github_token are NOT needed in this tfvars file!
-# The GitHub provider automatically reads:
-#   GITHUB_TOKEN = "\${{ secrets.GITHUB_TOKEN }}"
+# Zero-boilerplate: github_owner and github_token are automatically read from runner environment variables:
+#   GITHUB_TOKEN = "\${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}"
 #   GITHUB_OWNER = "\${{ github.repository_owner }}"
 
 repositories = {
 ${repos
   .map(
     (r) => `  "${r.name}" = {
-    description           = "${r.description}"
-    visibility            = "private"
-    azure_client_id       = "${r.azureClientId}" # ${r.scope}
-    azure_tenant_id       = "${r.azureTenantId}"
-    azure_subscription_id = "${r.azureSubscriptionId}"
-    required_approvals    = ${r.requiredApprovals}
-    status_checks         = ["Terraform Unit Tests", "Terraform Plan"]
-    topics                = [${r.topics.map((t) => `"${t}"`).join(', ')}]
+    description        = "${r.description}"
+    visibility         = "private"
+    protected_branches = [${r.protectedBranches.map((b) => `"${b}"`).join(', ')}]
+    required_approvals = ${r.requiredApprovals}
+    status_checks      = ["Terraform Unit Tests", "Terraform Plan"]
+    topics             = [${r.topics.map((t) => `"${t}"`).join(', ')}]
+    environments = {
+${Object.entries(r.environments)
+  .map(
+    ([envName, envCfg]) => `      "${envName}" = {
+        azure_client_id       = "${envCfg.azureClientId}" # ${envCfg.scopeDescription || ''}
+        azure_tenant_id       = "${envCfg.azureTenantId}"
+        azure_subscription_id = "${envCfg.azureSubscriptionId}"
+      }`
+  )
+  .join('\n')}
+    }
   }`
   )
   .join('\n\n')}
@@ -166,7 +189,7 @@ resource "github_repository" "this" {
   name                   = var.name
   description            = var.description
   visibility             = var.visibility
-  auto_init              = true # Initializes with default README.md
+  auto_init              = true # Initializes with default README.md on main branch
   has_issues             = true
   has_projects           = false
   has_wiki               = false
@@ -177,10 +200,22 @@ resource "github_repository" "this" {
   topics                 = var.topics
 }
 
-# 2. Configure Strict Branch Protection Rules for 'main' branch
-resource "github_branch_protection" "main" {
+# 2. Create Additional Branches (e.g. 'dev') if specified in protected_branches
+resource "github_branch" "additional_branches" {
+  for_each      = toset([for b in var.protected_branches : b if b != var.default_branch])
+  repository    = github_repository.this.name
+  branch        = each.value
+  source_branch = var.default_branch
+
+  depends_on = [github_repository.this]
+}
+
+# 3. Apply Strict Branch Protection to All Protected Branches ('main', 'dev', etc.)
+resource "github_branch_protection" "protection" {
+  for_each = toset(var.protected_branches)
+
   repository_id                   = github_repository.this.name
-  pattern                         = var.target_branch
+  pattern                         = each.value
   enforce_admins                  = var.enforce_admins
   required_linear_history         = true
   allows_force_pushes             = false
@@ -199,43 +234,59 @@ resource "github_branch_protection" "main" {
     contexts = var.status_checks
   }
 
-  depends_on = [github_repository.this]
+  depends_on = [
+    github_repository.this,
+    github_branch.additional_branches
+  ]
 }
 
-# 3. Create Target Environment (e.g., 'prod')
-resource "github_repository_environment" "prod" {
+# 4. Provision Environments (e.g. 'dev' and 'prod')
+resource "github_repository_environment" "environments" {
+  for_each          = var.environments
   repository        = github_repository.this.name
-  environment       = var.environment_name
+  environment       = each.key
   can_admins_bypass = true
 
   depends_on = [github_repository.this]
 }
 
-# 4. Inject Dedicated Azure OIDC Client ID into 'prod' Environment Secret
+# 5. Inject Environment-Specific Azure OIDC Client ID
 resource "github_actions_environment_secret" "azure_client_id" {
-  count           = var.azure_client_id != "" ? 1 : 0
+  for_each = {
+    for env_name, env_cfg in var.environments : env_name => env_cfg
+    if env_cfg.azure_client_id != ""
+  }
+
   repository      = github_repository.this.name
-  environment     = github_repository_environment.prod.environment
+  environment     = github_repository_environment.environments[each.key].environment
   secret_name     = "AZURE_CLIENT_ID"
-  plaintext_value = var.azure_client_id
+  plaintext_value = each.value.azure_client_id
 }
 
-# 5. Inject Dedicated Azure OIDC Tenant ID into 'prod' Environment Secret
+# 6. Inject Environment-Specific Azure OIDC Tenant ID
 resource "github_actions_environment_secret" "azure_tenant_id" {
-  count           = var.azure_tenant_id != "" ? 1 : 0
+  for_each = {
+    for env_name, env_cfg in var.environments : env_name => env_cfg
+    if env_cfg.azure_tenant_id != ""
+  }
+
   repository      = github_repository.this.name
-  environment     = github_repository_environment.prod.environment
+  environment     = github_repository_environment.environments[each.key].environment
   secret_name     = "AZURE_TENANT_ID"
-  plaintext_value = var.azure_tenant_id
+  plaintext_value = each.value.azure_tenant_id
 }
 
-# 6. Inject Dedicated Azure OIDC Subscription ID into 'prod' Environment Secret
+# 7. Inject Environment-Specific Azure OIDC Subscription ID
 resource "github_actions_environment_secret" "azure_subscription_id" {
-  count           = var.azure_subscription_id != "" ? 1 : 0
+  for_each = {
+    for env_name, env_cfg in var.environments : env_name => env_cfg
+    if env_cfg.azure_subscription_id != ""
+  }
+
   repository      = github_repository.this.name
-  environment     = github_repository_environment.prod.environment
+  environment     = github_repository_environment.environments[each.key].environment
   secret_name     = "AZURE_SUBSCRIPTION_ID"
-  plaintext_value = var.azure_subscription_id
+  plaintext_value = each.value.azure_subscription_id
 }
 `,
     'modules/repository/variables.tf': `# /githubascode/modules/repository/variables.tf
@@ -243,23 +294,27 @@ variable "name" { type = string }
 variable "description" { type = string; default = "" }
 variable "visibility" { type = string; default = "private" }
 variable "topics" { type = list(string); default = ["terraform"] }
-variable "target_branch" { type = string; default = "main" }
+variable "default_branch" { type = string; default = "main" }
+variable "protected_branches" { type = list(string); default = ["main"] }
 variable "enforce_admins" { type = bool; default = true }
 variable "required_approvals" { type = number; default = 1 }
 variable "dismiss_stale_reviews" { type = bool; default = true }
 variable "require_code_owner_reviews" { type = bool; default = true }
 variable "status_checks" { type = list(string); default = ["Terraform Unit Tests", "Terraform Plan"] }
-variable "environment_name" { type = string; default = "prod" }
-variable "azure_client_id" { type = string; sensitive = true }
-variable "azure_tenant_id" { type = string; sensitive = true }
-variable "azure_subscription_id" { type = string; sensitive = true }
+variable "environments" {
+  type = map(object({
+    azure_client_id       = string
+    azure_tenant_id       = string
+    azure_subscription_id = string
+  }))
+}
 `,
     'modules/repository/outputs.tf': `# /githubascode/modules/repository/outputs.tf
 output "repository_name" { value = github_repository.this.name }
 output "html_url" { value = github_repository.this.html_url }
 output "git_clone_url" { value = github_repository.this.git_clone_url }
-output "environment_name" { value = github_repository_environment.prod.environment }
-output "branch_protection_id" { value = github_branch_protection.main.id }
+output "environments" { value = [for e in github_repository_environment.environments : e.environment] }
+output "protected_branches" { value = [for p in github_branch_protection.protection : p.pattern] }
 `,
   };
 
@@ -300,21 +355,24 @@ output "branch_protection_id" { value = github_branch_protection.main.id }
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">
               <FolderGit2 className="w-4 h-4" />
-              GitHub-as-Code Terraform Architecture
+              GitHub-as-Code Terraform Architecture (Platform & Application Repos)
             </div>
             <h2 className="text-xl font-bold text-slate-100">
-              Enterprise Platform Repositories & Isolated Azure OIDC Credentials
+              Multi-Environment & Dual-Branch Protection with Isolated Azure OIDC
             </h2>
             <p className="text-slate-400 text-xs mt-1 max-w-3xl leading-relaxed">
-              Every platform repository is provisioned with its own strict branch protection on <code className="text-cyan-300">main</code>,
-              a dedicated <code className="text-cyan-300">prod</code> environment, and dedicated Azure OIDC credentials mapped to its cloud domain.
+              Application repositories (<code className="text-cyan-300">corp-billing-api</code>, <code className="text-cyan-300">corp-billing-web</code>, <code className="text-cyan-300">corp-products-api</code>)
+              are provisioned with both <code className="text-emerald-400">prod</code> and <code className="text-amber-400">dev</code> environments, and strict branch protection on both <code className="text-cyan-300">main</code> and <code className="text-cyan-300">dev</code> branches.
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-2.5 text-[11px] font-mono">
               <span className="bg-emerald-950/60 text-emerald-300 border border-emerald-800/80 px-2 py-0.5 rounded">
-                ✓ Zero Variable Boilerplate
+                ✓ Dual-Branch Protection (main + dev)
               </span>
-              <span className="text-slate-400">
-                Natively consumes <code className="text-cyan-300">GITHUB_TOKEN</code> and <code className="text-cyan-300">GITHUB_OWNER</code> from runner context
+              <span className="bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 px-2 py-0.5 rounded">
+                ✓ Dual Environments (dev + prod)
+              </span>
+              <span className="bg-indigo-950/60 text-indigo-300 border border-indigo-800/80 px-2 py-0.5 rounded">
+                ✓ Dedicated OIDC SPNs Per Env
               </span>
             </div>
           </div>
@@ -329,59 +387,141 @@ output "branch_protection_id" { value = github_branch_protection.main.id }
         </div>
       </div>
 
-      {/* 3 Platform Repositories Visual Matrix */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {repos.map((repo) => (
-          <div
-            key={repo.name}
-            className="p-4 rounded-xl bg-slate-900 border border-slate-800 flex flex-col justify-between space-y-3 hover:border-slate-700 transition-colors"
+      {/* Filter Tabs & Counter */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-1 p-1 bg-slate-900 rounded-lg border border-slate-800 text-xs">
+          <button
+            onClick={() => setFilterType('all')}
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+              filterType === 'all'
+                ? 'bg-slate-800 text-cyan-400 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
           >
-            <div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-xs font-bold text-cyan-300">{repo.name}</span>
-                {repos.length > 1 && (
-                  <button
-                    onClick={() => handleDeleteRepo(repo.name)}
-                    className="text-slate-600 hover:text-rose-400 transition-colors p-1"
-                    title="Remove repository"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
+            All Repositories ({repos.length})
+          </button>
+          <button
+            onClick={() => setFilterType('application')}
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+              filterType === 'application'
+                ? 'bg-slate-800 text-cyan-400 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Application Repos (dev + prod) ({repos.filter((r) => r.type === 'application').length})
+          </button>
+          <button
+            onClick={() => setFilterType('platform')}
+            className={`px-3 py-1.5 rounded-md font-medium transition-colors ${
+              filterType === 'platform'
+                ? 'bg-slate-800 text-cyan-400 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            Platform Repos (prod only) ({repos.filter((r) => r.type === 'platform').length})
+          </button>
+        </div>
+
+        <div className="text-xs text-slate-500 font-mono hidden sm:block">
+          Showing {filteredRepos.length} configured repositories
+        </div>
+      </div>
+
+      {/* Repositories Visual Matrix */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredRepos.map((repo) => {
+          const isApp = repo.type === 'application';
+          const envNames = Object.keys(repo.environments);
+
+          return (
+            <div
+              key={repo.name}
+              className={`p-4 rounded-xl bg-slate-900 border flex flex-col justify-between space-y-3 transition-colors ${
+                isApp ? 'border-indigo-900/40 hover:border-indigo-700/60' : 'border-slate-800 hover:border-slate-700'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-cyan-300">{repo.name}</span>
+                    <span
+                      className={`text-[9px] uppercase px-1.5 py-0.5 rounded font-mono font-semibold ${
+                        isApp
+                          ? 'bg-indigo-950 text-indigo-300 border border-indigo-800'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {repo.type}
+                    </span>
+                  </div>
+                  {repos.length > 1 && (
+                    <button
+                      onClick={() => handleDeleteRepo(repo.name)}
+                      className="text-slate-600 hover:text-rose-400 transition-colors p-1"
+                      title="Remove repository"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <p className="text-slate-400 text-[11px] mt-1.5 leading-relaxed">{repo.description}</p>
               </div>
-              <p className="text-slate-400 text-[11px] mt-1 leading-relaxed">{repo.description}</p>
+
+              <div className="space-y-2 pt-2 border-t border-slate-800/80 text-[11px]">
+                {/* Protected Branches */}
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 flex items-center gap-1 font-mono text-[10px]">
+                    <GitBranch className="w-3 h-3 text-cyan-400" />
+                    Protected Branches:
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {repo.protectedBranches.map((b) => (
+                      <span
+                        key={b}
+                        className="bg-slate-950 px-1.5 py-0.5 rounded font-mono text-[10px] text-cyan-300 border border-slate-800"
+                      >
+                        {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Provisioned Environments & OIDC Credentials */}
+                <div className="space-y-1">
+                  <span className="text-slate-500 block font-mono text-[10px]">
+                    Environments & OIDC Credentials:
+                  </span>
+                  <div className="grid grid-cols-1 gap-1">
+                    {Object.entries(repo.environments).map(([envName, envCfg]) => (
+                      <div
+                        key={envName}
+                        className="p-1.5 rounded bg-slate-950/70 border border-slate-800/70 text-[10px] font-mono flex items-center justify-between"
+                      >
+                        <span
+                          className={`font-semibold uppercase px-1 py-0.2 rounded text-[9px] ${
+                            envName === 'prod'
+                              ? 'text-emerald-400 bg-emerald-950/50'
+                              : 'text-amber-400 bg-amber-950/50'
+                          }`}
+                        >
+                          {envName}
+                        </span>
+                        <span className="text-slate-400 truncate max-w-[160px]" title={envCfg.azureClientId}>
+                          SPN: {envCfg.azureClientId.slice(0, 8)}...
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-
-            <div className="space-y-1.5 pt-2 border-t border-slate-800/80 text-[11px] font-mono">
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-slate-500">Domain Scope:</span>
-                <span className="text-slate-300 truncate max-w-[170px]" title={repo.scope}>
-                  {repo.scope}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-slate-500">Branch Protection:</span>
-                <span className="text-emerald-400">main (Strict)</span>
-              </div>
-
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-slate-500">Environment:</span>
-                <span className="text-cyan-400">prod (Secrets injected)</span>
-              </div>
-
-              <div className="flex items-center justify-between text-slate-400">
-                <span className="text-slate-500">Client ID:</span>
-                <span className="text-slate-300">{repo.azureClientId.slice(0, 8)}...</span>
-              </div>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Code Browser & File Explorer */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* File Tree (3 cols) */}
+        {/* File Tree (4 cols) */}
         <div className="lg:col-span-4 p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
           <div className="text-xs font-semibold text-slate-300 flex items-center justify-between pb-2 border-b border-slate-800">
             <span>/githubascode File Tree</span>
@@ -479,10 +619,53 @@ output "branch_protection_id" { value = github_branch_protection.main.id }
           <div className="w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-800 p-6 space-y-4 shadow-2xl">
             <h3 className="text-base font-bold text-slate-100 flex items-center gap-2">
               <Plus className="w-4 h-4 text-cyan-400" />
-              Add Platform Repository to GitHub-as-Code
+              Add Repository (Platform or Application)
             </h3>
 
             <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-slate-300 block mb-1 font-medium">Repository Type</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setNewRepo({
+                        ...newRepo,
+                        type: 'application',
+                        protectedBranches: ['main', 'dev'],
+                      })
+                    }
+                    className={`py-2 px-3 rounded-lg border text-left font-medium transition-colors ${
+                      newRepo.type === 'application'
+                        ? 'bg-indigo-950/70 border-indigo-500 text-indigo-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <div>Application Repo</div>
+                    <div className="text-[10px] text-slate-500">dev + prod envs, main + dev branches</div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setNewRepo({
+                        ...newRepo,
+                        type: 'platform',
+                        protectedBranches: ['main'],
+                      })
+                    }
+                    className={`py-2 px-3 rounded-lg border text-left font-medium transition-colors ${
+                      newRepo.type === 'platform'
+                        ? 'bg-indigo-950/70 border-indigo-500 text-indigo-300'
+                        : 'bg-slate-950 border-slate-800 text-slate-400'
+                    }`}
+                  >
+                    <div>Platform Repo</div>
+                    <div className="text-[10px] text-slate-500">prod only, main branch</div>
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="text-slate-300 block mb-1 font-medium">Repository Name</label>
                 <input
@@ -490,6 +673,7 @@ output "branch_protection_id" { value = github_branch_protection.main.id }
                   value={newRepo.name}
                   onChange={(e) => setNewRepo({ ...newRepo, name: e.target.value })}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono"
+                  placeholder="corp-billing-api"
                 />
               </div>
 
@@ -505,33 +689,51 @@ output "branch_protection_id" { value = github_branch_protection.main.id }
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 block mb-1 font-medium">Azure Client ID (SPN)</label>
+                  <label className="text-slate-300 block mb-1 font-medium">Dev Azure Client ID</label>
                   <input
                     type="text"
-                    value={newRepo.azureClientId}
-                    onChange={(e) => setNewRepo({ ...newRepo, azureClientId: e.target.value })}
+                    value={newRepo.environments.dev?.azureClientId || ''}
+                    onChange={(e) =>
+                      setNewRepo({
+                        ...newRepo,
+                        environments: {
+                          ...newRepo.environments,
+                          dev: {
+                            ...(newRepo.environments.dev || {
+                              azureTenantId: '88888888-4444-4444-4444-121212121212',
+                              azureSubscriptionId: '30000000-0000-0000-0000-000000000001',
+                            }),
+                            azureClientId: e.target.value,
+                          },
+                        },
+                      })
+                    }
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono text-[11px]"
                   />
                 </div>
                 <div>
-                  <label className="text-slate-300 block mb-1 font-medium">Azure Subscription ID</label>
+                  <label className="text-slate-300 block mb-1 font-medium">Prod Azure Client ID</label>
                   <input
                     type="text"
-                    value={newRepo.azureSubscriptionId}
-                    onChange={(e) => setNewRepo({ ...newRepo, azureSubscriptionId: e.target.value })}
+                    value={newRepo.environments.prod?.azureClientId || ''}
+                    onChange={(e) =>
+                      setNewRepo({
+                        ...newRepo,
+                        environments: {
+                          ...newRepo.environments,
+                          prod: {
+                            ...(newRepo.environments.prod || {
+                              azureTenantId: '88888888-4444-4444-4444-121212121212',
+                              azureSubscriptionId: '40000000-0000-0000-0000-000000000001',
+                            }),
+                            azureClientId: e.target.value,
+                          },
+                        },
+                      })
+                    }
                     className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 font-mono text-[11px]"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="text-slate-300 block mb-1 font-medium">Domain Scope</label>
-                <input
-                  type="text"
-                  value={newRepo.scope}
-                  onChange={(e) => setNewRepo({ ...newRepo, scope: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200"
-                />
               </div>
             </div>
 

@@ -18,14 +18,20 @@ variable "visibility" {
 variable "topics" {
   description = "List of topics/tags to apply to the repository."
   type        = list(string)
-  default     = ["terraform", "azure-platform"]
+  default     = ["terraform"]
 }
 
-# Branch Protection Variables
-variable "target_branch" {
-  description = "Default branch name to protect."
+# Branch & Protection Settings
+variable "default_branch" {
+  description = "Default repository branch."
   type        = string
   default     = "main"
+}
+
+variable "protected_branches" {
+  description = "List of branch names that must be created and protected (e.g. ['main', 'dev'] for application repos, or ['main'] for platform repos)."
+  type        = list(string)
+  default     = ["main"]
 }
 
 variable "enforce_admins" {
@@ -58,27 +64,19 @@ variable "status_checks" {
   default     = ["Terraform Unit Tests", "Terraform Plan"]
 }
 
-# Environment & Azure OIDC Secrets
-variable "environment_name" {
-  description = "Target GitHub environment name to create."
-  type        = string
-  default     = "prod"
-}
-
-variable "azure_client_id" {
-  description = "Dedicated Azure Client (Application) ID for this repository's OIDC federation."
-  type        = string
-  sensitive   = true
-}
-
-variable "azure_tenant_id" {
-  description = "Azure Active Directory / Entra Tenant ID for this repository."
-  type        = string
-  sensitive   = true
-}
-
-variable "azure_subscription_id" {
-  description = "Dedicated Azure Subscription ID scoped to this platform domain."
-  type        = string
-  sensitive   = true
+# Multi-Environment & Dedicated Azure OIDC Credentials
+variable "environments" {
+  description = "Map of environments to provision (e.g., 'prod', 'dev') with dedicated Azure OIDC credentials."
+  type = map(object({
+    azure_client_id       = string
+    azure_tenant_id       = string
+    azure_subscription_id = string
+  }))
+  default = {
+    "prod" = {
+      azure_client_id       = ""
+      azure_tenant_id       = ""
+      azure_subscription_id = ""
+    }
+  }
 }

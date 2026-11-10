@@ -1,47 +1,126 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # terraform.tfvars.example
 # ---------------------------------------------------------------------------------------------------------------------
-# Notice: github_owner and github_token are NOT needed in this tfvars file!
-# The GitHub provider automatically reads:
-#   GITHUB_TOKEN = "${{ secrets.GITHUB_TOKEN }}" (or ADMIN_GITHUB_TOKEN)
+# Zero-boilerplate: github_owner and github_token are automatically read from runner environment variables:
+#   GITHUB_TOKEN = "${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}"
 #   GITHUB_OWNER = "${{ github.repository_owner }}"
 # ---------------------------------------------------------------------------------------------------------------------
 
-# Platform Repositories with Dedicated Azure OIDC Entra App Credentials
 repositories = {
-  # 1. Foundation: Scoped to Management Group root / Subscription Vending
+  # -------------------------------------------------------------------------
+  # A. Platform Infrastructure (Single 'main' branch, 'prod' environment)
+  # -------------------------------------------------------------------------
   "corp-platform-foundation" = {
-    description           = "Enterprise governance: Management Groups, Azure Policy, RBAC baselines, and subscription vending"
-    visibility            = "private"
-    azure_client_id       = "a1b2c3d4-e5f6-7890-abcd-ef1234567890" # SPN: spn-github-platform-foundation
-    azure_tenant_id       = "88888888-4444-4444-4444-121212121212" # Azure Entra Tenant ID
-    azure_subscription_id = "11111111-2222-3333-4444-555555555555" # Management Group root / Vending Sub
-    required_approvals    = 1
-    status_checks         = ["Terraform Unit Tests", "Terraform Plan"]
-    topics                = ["azure", "landing-zone", "management-groups", "policy"]
+    description        = "Enterprise governance: Management Groups, Azure Policy, RBAC baselines, and subscription vending"
+    visibility         = "private"
+    protected_branches = ["main"]
+    required_approvals = 1
+    status_checks      = ["Terraform Unit Tests", "Terraform Plan"]
+    topics             = ["azure", "landing-zone", "management-groups", "policy"]
+    environments = {
+      "prod" = {
+        azure_client_id       = "a1b2c3d4-e5f6-7890-abcd-ef1234567890" # SPN: spn-platform-foundation
+        azure_tenant_id       = "88888888-4444-4444-4444-121212121212"
+        azure_subscription_id = "11111111-2222-3333-4444-555555555555"
+      }
+    }
   }
 
-  # 2. Management: Scoped to the Central Log Analytics / Sentinel Subscription
   "corp-platform-management" = {
-    description           = "Centralized Ops: Log Analytics, Sentinel, Azure Monitor, and alert policies"
-    visibility            = "private"
-    azure_client_id       = "b2c3d4e5-f6a7-8901-bcde-f12345678901" # SPN: spn-github-platform-management
-    azure_tenant_id       = "88888888-4444-4444-4444-121212121212" # Azure Entra Tenant ID
-    azure_subscription_id = "22222222-3333-4444-5555-666666666666" # Subscription: sub-corp-management
-    required_approvals    = 1
-    status_checks         = ["Terraform Unit Tests", "Terraform Plan"]
-    topics                = ["azure", "operations", "sentinel", "monitor"]
+    description        = "Centralized Ops: Log Analytics, Sentinel, Azure Monitor, and alert policies"
+    visibility         = "private"
+    protected_branches = ["main"]
+    required_approvals = 1
+    status_checks      = ["Terraform Unit Tests", "Terraform Plan"]
+    topics             = ["azure", "operations", "sentinel", "monitor"]
+    environments = {
+      "prod" = {
+        azure_client_id       = "b2c3d4e5-f6a7-8901-bcde-f12345678901" # SPN: spn-platform-management
+        azure_tenant_id       = "88888888-4444-4444-4444-121212121212"
+        azure_subscription_id = "22222222-3333-4444-5555-666666666666"
+      }
+    }
   }
 
-  # 3. Connectivity: Scoped to Hub VNet / Virtual WAN / Firewall Subscription
   "corp-platform-connectivity" = {
-    description           = "Centralized Networking: Hub VNet, Azure Firewall, VPN/ExpressRoute, and global NSG rules"
-    visibility            = "private"
-    azure_client_id       = "c3d4e5f6-a7b8-9012-cdef-123456789012" # SPN: spn-github-platform-connectivity
-    azure_tenant_id       = "88888888-4444-4444-4444-121212121212" # Azure Entra Tenant ID
-    azure_subscription_id = "33333333-4444-5555-6666-777777777777" # Subscription: sub-corp-connectivity
-    required_approvals    = 1
-    status_checks         = ["Terraform Unit Tests", "Terraform Plan"]
-    topics                = ["azure", "networking", "firewall", "hub-spoke"]
+    description        = "Centralized Networking: Hub VNet, Azure Firewall, VPN/ExpressRoute, and global NSG rules"
+    visibility         = "private"
+    protected_branches = ["main"]
+    required_approvals = 1
+    status_checks      = ["Terraform Unit Tests", "Terraform Plan"]
+    topics             = ["azure", "networking", "firewall", "hub-spoke"]
+    environments = {
+      "prod" = {
+        azure_client_id       = "c3d4e5f6-a7b8-9012-cdef-123456789012" # SPN: spn-platform-connectivity
+        azure_tenant_id       = "88888888-4444-4444-4444-121212121212"
+        azure_subscription_id = "33333333-4444-5555-6666-777777777777"
+      }
+    }
+  }
+
+  # -------------------------------------------------------------------------
+  # B. Application Services (Dual 'main' & 'dev' branches, Dual 'dev' & 'prod' environments)
+  # -------------------------------------------------------------------------
+  "corp-billing-api" = {
+    description        = "Billing Microservice API: invoice generation, payment gateways, and usage metering"
+    visibility         = "private"
+    protected_branches = ["main", "dev"] # Both branches protected!
+    required_approvals = 1
+    status_checks      = ["CI Build & Unit Tests", "Terraform Security Scan"]
+    topics             = ["microservice", "billing", "api", "azure-container-apps"]
+    environments = {
+      "dev" = {
+        azure_client_id       = "d4e5f6a7-b8c9-0123-def4-567890123456" # SPN: spn-billing-api-dev
+        azure_tenant_id       = "88888888-4444-4444-4444-121212121212"
+        azure_subscription_id = "44444444-5555-6666-7777-888888888888" # dev workload sub
+      }
+      "prod" = {
+        azure_client_id       = "e5f6a7b8-c9d0-1234-ef01-678901234567" # SPN: spn-billing-api-prod
+        azure_tenant_id       = "88888888-4444-4444-4444-121212121212"
+        azure_subscription_id = "55555555-6666-7777-8888-999999999999" # prod workload sub
+      }
+    }
+  }
+
+  "corp-billing-web" = {
+    description        = "Billing Customer Portal: self-service invoicing and billing dashboard frontend"
+    visibility         = "private"
+    protected_branches = ["main", "dev"]
+    required_approvals = 1
+    status_checks      = ["Frontend Lint & Tests", "E2E Smoke Tests"]
+    topics             = ["frontend", "billing", "react", "azure-static-web-apps"]
+    environments = {
+      "dev" = {
+        azure_client_id       = "f6a7b8c9-d0e1-2345-f012-789012345678"
+        azure_tenant_id       = "88888888-4444-4444-4444-121212121212"
+        azure_subscription_id = "44444444-5555-6666-7777-888888888888"
+      }
+      "prod" = {
+        azure_client_id       = "a7b8c9d0-e1f2-3456-0123-890123456789"
+        azure_tenant_id       = "88888888-4444-4444-4444-121212121212"
+        azure_subscription_id = "55555555-6666-7777-8888-999999999999"
+      }
+    }
+  }
+
+  "corp-products-api" = {
+    description        = "Product Catalog & Pricing Engine: high-performance product queries and pricing rules"
+    visibility         = "private"
+    protected_branches = ["main", "dev"]
+    required_approvals = 1
+    status_checks      = ["Unit Tests", "Integration Tests"]
+    topics             = ["microservice", "catalog", "products", "api"]
+    environments = {
+      "dev" = {
+        azure_client_id       = "b8c9d0e1-f2a3-4567-1234-901234567890"
+        azure_tenant_id       = "88888888-4444-4444-4444-121212121212"
+        azure_subscription_id = "44444444-5555-6666-7777-888888888888"
+      }
+      "prod" = {
+        azure_client_id       = "c9d0e1f2-a3b4-5678-2345-012345678901"
+        azure_tenant_id       = "88888888-4444-4444-4444-121212121212"
+        azure_subscription_id = "55555555-6666-7777-8888-999999999999"
+      }
+    }
   }
 }

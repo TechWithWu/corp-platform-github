@@ -650,46 +650,140 @@ jobs:
         run: terraform plan
 `;
 
-export interface PlatformRepoConfig {
-  name: string;
-  description: string;
+export interface RepoEnvironment {
   azureClientId: string;
   azureTenantId: string;
   azureSubscriptionId: string;
-  scope: string;
+  scopeDescription?: string;
+}
+
+export interface PlatformRepoConfig {
+  name: string;
+  type: 'platform' | 'application';
+  description: string;
+  protectedBranches: string[];
   topics: string[];
   requiredApprovals: number;
+  environments: Record<string, RepoEnvironment>;
 }
 
 export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
+  // 1. Platform Infrastructure Repositories (prod env, main protected branch)
   {
     name: 'corp-platform-foundation',
+    type: 'platform',
     description: 'Enterprise governance: Management Groups, Azure Policy, RBAC baselines, and subscription vending',
-    azureClientId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    azureTenantId: '88888888-4444-4444-4444-121212121212',
-    azureSubscriptionId: '11111111-2222-3333-4444-555555555555',
-    scope: 'Tenant Root / Management Groups & Vending',
+    protectedBranches: ['main'],
     topics: ['azure', 'landing-zone', 'management-groups', 'policy'],
     requiredApprovals: 1,
+    environments: {
+      prod: {
+        azureClientId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '11111111-2222-3333-4444-555555555555',
+        scopeDescription: 'Tenant Root / Management Groups & Vending Sub',
+      },
+    },
   },
   {
     name: 'corp-platform-management',
+    type: 'platform',
     description: 'Centralized Ops: Log Analytics, Sentinel, Azure Monitor, and alert policies',
-    azureClientId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
-    azureTenantId: '88888888-4444-4444-4444-121212121212',
-    azureSubscriptionId: '22222222-3333-4444-5555-666666666666',
-    scope: 'Management Subscription (sub-corp-management)',
+    protectedBranches: ['main'],
     topics: ['azure', 'operations', 'sentinel', 'monitor'],
     requiredApprovals: 1,
+    environments: {
+      prod: {
+        azureClientId: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '22222222-3333-4444-5555-666666666666',
+        scopeDescription: 'Management Ops Subscription (sub-corp-management)',
+      },
+    },
   },
   {
     name: 'corp-platform-connectivity',
+    type: 'platform',
     description: 'Centralized Networking: Hub VNet, Azure Firewall, VPN/ExpressRoute, and global NSG rules',
-    azureClientId: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
-    azureTenantId: '88888888-4444-4444-4444-121212121212',
-    azureSubscriptionId: '33333333-4444-5555-6666-777777777777',
-    scope: 'Connectivity Subscription (sub-corp-connectivity)',
+    protectedBranches: ['main'],
     topics: ['azure', 'networking', 'firewall', 'hub-spoke'],
     requiredApprovals: 1,
+    environments: {
+      prod: {
+        azureClientId: 'c3d4e5f6-a7b8-9012-cdef-123456789012',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '33333333-4444-5555-6666-777777777777',
+        scopeDescription: 'Hub Network Subscription (sub-corp-connectivity)',
+      },
+    },
+  },
+
+  // 2. Application Repositories (dev & prod envs, main & dev protected branches)
+  {
+    name: 'corp-billing-api',
+    type: 'application',
+    description: 'Billing Microservice API: invoice generation, payment gateways, and usage metering',
+    protectedBranches: ['main', 'dev'],
+    topics: ['microservice', 'billing', 'api', 'azure-container-apps'],
+    requiredApprovals: 1,
+    environments: {
+      dev: {
+        azureClientId: 'd4e5f6a7-b8c9-0123-def4-567890123456',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '44444444-5555-6666-7777-888888888888',
+        scopeDescription: 'Billing Dev Workload Subscription',
+      },
+      prod: {
+        azureClientId: 'e5f6a7b8-c9d0-1234-ef01-678901234567',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '55555555-6666-7777-8888-999999999999',
+        scopeDescription: 'Billing Production Workload Subscription',
+      },
+    },
+  },
+  {
+    name: 'corp-billing-web',
+    type: 'application',
+    description: 'Billing Customer Portal: self-service invoicing and billing dashboard frontend',
+    protectedBranches: ['main', 'dev'],
+    topics: ['frontend', 'billing', 'react', 'azure-static-web-apps'],
+    requiredApprovals: 1,
+    environments: {
+      dev: {
+        azureClientId: 'f6a7b8c9-d0e1-2345-f012-789012345678',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '44444444-5555-6666-7777-888888888888',
+        scopeDescription: 'Billing Dev Static Apps Subscription',
+      },
+      prod: {
+        azureClientId: 'a7b8c9d0-e1f2-3456-0123-890123456789',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '55555555-6666-7777-8888-999999999999',
+        scopeDescription: 'Billing Production Static Apps Subscription',
+      },
+    },
+  },
+  {
+    name: 'corp-products-api',
+    type: 'application',
+    description: 'Product Catalog & Pricing Engine: high-performance product queries and pricing rules',
+    protectedBranches: ['main', 'dev'],
+    topics: ['microservice', 'catalog', 'products', 'api'],
+    requiredApprovals: 1,
+    environments: {
+      dev: {
+        azureClientId: 'b8c9d0e1-f2a3-4567-1234-901234567890',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '44444444-5555-6666-7777-888888888888',
+        scopeDescription: 'Products Dev Workload Subscription',
+      },
+      prod: {
+        azureClientId: 'c9d0e1f2-a3b4-5678-2345-012345678901',
+        azureTenantId: '88888888-4444-4444-4444-121212121212',
+        azureSubscriptionId: '55555555-6666-7777-8888-999999999999',
+        scopeDescription: 'Products Production Workload Subscription',
+      },
+    },
   },
 ];
+

@@ -13,12 +13,12 @@ output "git_clone_url" {
   value       = github_repository.this.git_clone_url
 }
 
-output "environment_name" {
-  description = "The configured environment name."
-  value       = github_repository_environment.prod.environment
+output "environments" {
+  description = "List of provisioned environment names."
+  value       = [for e in github_repository_environment.environments : e.environment]
 }
 
-output "branch_protection_id" {
-  description = "ID of the branch protection configuration."
-  value       = github_branch_protection.main.id
+output "protected_branches" {
+  description = "List of protected branch patterns."
+  value       = [for p in github_branch_protection.protection : p.pattern]
 }

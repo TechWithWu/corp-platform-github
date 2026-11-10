@@ -12,7 +12,7 @@ resource "github_repository" "this" {
   name                   = var.name
   description            = var.description
   visibility             = var.visibility
-  auto_init              = true # Initializes repository with default README.md
+  auto_init              = true # Initializes with default README.md on main branch
   has_issues             = true
   has_projects           = false
   has_wiki               = false
@@ -23,10 +23,22 @@ resource "github_repository" "this" {
   topics                 = var.topics
 }
 
-# 2. Configure Strict Branch Protection Rules for 'main' branch
-resource "github_branch_protection" "main" {
+# 2. Create Additional Branches (e.g. 'dev') if specified in protected_branches
+resource "github_branch" "additional_branches" {
+  for_each      = toset([for b in var.protected_branches : b if b != var.default_branch])
+  repository    = github_repository.this.name
+  branch        = each.value
+  source_branch = var.default_branch
+
+  depends_on = [github_repository.this]
+}
+
+# 3. Apply Strict Branch Protection to All Protected Branches ('main', 'dev', etc.)
+resource "github_branch_protection" "protection" {
+  for_each = toset(var.protected_branches)
+
   repository_id                   = github_repository.this.name
-  pattern                         = var.target_branch
+  pattern                         = each.value
   enforce_admins                  = var.enforce_admins
   required_linear_history         = true
   allows_force_pushes             = false
@@ -45,41 +57,57 @@ resource "github_branch_protection" "main" {
     contexts = var.status_checks
   }
 
-  depends_on = [github_repository.this]
+  depends_on = [
+    github_repository.this,
+    github_branch.additional_branches
+  ]
 }
 
-# 3. Create Target Environment (e.g., 'prod')
-resource "github_repository_environment" "prod" {
+# 4. Provision Environments (e.g. 'dev' and 'prod')
+resource "github_repository_environment" "environments" {
+  for_each          = var.environments
   repository        = github_repository.this.name
-  environment       = var.environment_name
+  environment       = each.key
   can_admins_bypass = true
 
   depends_on = [github_repository.this]
 }
 
-# 4. Inject Dedicated Azure OIDC Client ID into 'prod' Environment Secret
+# 5. Inject Environment-Specific Azure OIDC Client ID
 resource "github_actions_environment_secret" "azure_client_id" {
-  count           = var.azure_client_id != "" ? 1 : 0
+  for_each = {
+    for env_name, env_cfg in var.environments : env_name => env_cfg
+    if env_cfg.azure_client_id != ""
+  }
+
   repository      = github_repository.this.name
-  environment     = github_repository_environment.prod.environment
+  environment     = github_repository_environment.environments[each.key].environment
   secret_name     = "AZURE_CLIENT_ID"
-  plaintext_value = var.azure_client_id
+  plaintext_value = each.value.azure_client_id
 }
 
-# 5. Inject Dedicated Azure OIDC Tenant ID into 'prod' Environment Secret
+# 6. Inject Environment-Specific Azure OIDC Tenant ID
 resource "github_actions_environment_secret" "azure_tenant_id" {
-  count           = var.azure_tenant_id != "" ? 1 : 0
+  for_each = {
+    for env_name, env_cfg in var.environments : env_name => env_cfg
+    if env_cfg.azure_tenant_id != ""
+  }
+
   repository      = github_repository.this.name
-  environment     = github_repository_environment.prod.environment
+  environment     = github_repository_environment.environments[each.key].environment
   secret_name     = "AZURE_TENANT_ID"
-  plaintext_value = var.azure_tenant_id
+  plaintext_value = each.value.azure_tenant_id
 }
 
-# 6. Inject Dedicated Azure OIDC Subscription ID into 'prod' Environment Secret
+# 7. Inject Environment-Specific Azure OIDC Subscription ID
 resource "github_actions_environment_secret" "azure_subscription_id" {
-  count           = var.azure_subscription_id != "" ? 1 : 0
+  for_each = {
+    for env_name, env_cfg in var.environments : env_name => env_cfg
+    if env_cfg.azure_subscription_id != ""
+  }
+
   repository      = github_repository.this.name
-  environment     = github_repository_environment.prod.environment
+  environment     = github_repository_environment.environments[each.key].environment
   secret_name     = "AZURE_SUBSCRIPTION_ID"
-  plaintext_value = var.azure_subscription_id
+  plaintext_value = each.value.azure_subscription_id
 }
