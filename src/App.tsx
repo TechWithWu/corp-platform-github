@@ -156,18 +156,18 @@ export default function App() {
               /githubascode/
             </code>
             <ChevronRight className="w-3.5 h-3.5 text-slate-600" />
-            <span className="text-emerald-400 font-medium">3 Platform Repositories · Isolated OIDC Credentials</span>
+            <span className="text-emerald-400 font-medium">Decoupled Catalog (repositories.json)</span>
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-slate-500">Branch Protection:</span>
-            <span className="text-emerald-400 font-mono">Strict (main)</span>
+            <span className="text-slate-500">dev Branch:</span>
+            <span className="text-rose-400 font-mono">No Direct Push</span>
+            <span className="text-slate-600">·</span>
+            <span className="text-slate-500">prod Approver:</span>
+            <span className="text-emerald-400 font-mono">seniorguy@gmail.com</span>
             <span className="text-slate-600">·</span>
             <span className="text-slate-500">Environments:</span>
-            <span className="text-cyan-400 font-mono">prod</span>
-            <span className="text-slate-600">·</span>
-            <span className="text-slate-500">Azure Credentials:</span>
-            <span className="text-emerald-400 font-mono">Dedicated / Isolated</span>
+            <span className="text-cyan-400 font-mono">dev · qa · cae · prod</span>
           </div>
         </div>
 

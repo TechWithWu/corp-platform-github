@@ -1,3 +1,8 @@
+output "total_repositories_count" {
+  description = "Total number of repositories provisioned from the catalog."
+  value       = length(module.repositories)
+}
+
 output "repository_urls" {
   description = "Map of created repository names to their GitHub HTML URLs."
   value = {
@@ -6,32 +11,24 @@ output "repository_urls" {
 }
 
 output "provisioned_environments" {
-  description = "Map of repository names to their provisioned deployment environments."
+  description = "Map of repository names to their provisioned deployment environments ('dev', 'qa', 'cae', 'prod')."
   value = {
     for name, repo in module.repositories : name => repo.environments
   }
 }
 
 output "protected_branches" {
-  description = "Map of repository names to their protected branch patterns."
+  description = "Map of repository names to their protected branch patterns ('main', 'dev')."
   value = {
     for name, repo in module.repositories : name => repo.protected_branches
   }
 }
 
-output "security_audit_summary" {
-  description = "Audit summary of security protections, environments, and OIDC secrets provisioned per repository."
+output "prod_approval_gate" {
+  description = "Designated reviewer gate enforced on all 'prod' deployment environments."
   value = {
-    for name, config in var.repositories : name => {
-      protected_branches = coalesce(config.protected_branches, ["main"])
-      environments       = keys(config.environments)
-      oidc_credentials = {
-        for env_name, env_cfg in config.environments : env_name => {
-          client_id_configured = env_cfg.azure_client_id != ""
-          tenant_id_configured = env_cfg.azure_tenant_id != ""
-          subscription_id_configured = env_cfg.azure_subscription_id != ""
-        }
-      }
-    }
+    approver_email    = var.prod_approver_email
+    approver_username = var.prod_approver_username
+    policy            = "Required approval before production deployment. Administrators cannot bypass."
   }
 }

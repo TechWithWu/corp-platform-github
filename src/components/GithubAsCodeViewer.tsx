@@ -56,52 +56,134 @@ export const GithubAsCodeViewer: React.FC = () => {
   });
 
   const filesContent: Record<string, string> = {
+    'repositories.json': `{
+  "repositories": [
+    {
+      "name": "corp-billing-api",
+      "type": "application",
+      "description": "Billing Microservice API",
+      "protected_branches": ["main", "dev"],
+      "environments": {
+        "dev": { "azure_client_id": "10000000-0000-0000-0000-000000000001", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000001" },
+        "qa":  { "azure_client_id": "10000000-0000-0000-0000-000000000002", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000002" },
+        "cae": { "azure_client_id": "10000000-0000-0000-0000-000000000003", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000003" },
+        "prod":{ "azure_client_id": "20000000-0000-0000-0000-000000000001", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "40000000-0000-0000-0000-000000000001" }
+      }
+    },
+    {
+      "name": "corp-billing-web",
+      "type": "application",
+      "description": "Billing Customer Portal Frontend",
+      "protected_branches": ["main", "dev"],
+      "environments": {
+        "dev": { "azure_client_id": "10000000-0000-0000-0000-000000000011", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000001" },
+        "qa":  { "azure_client_id": "10000000-0000-0000-0000-000000000012", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000002" },
+        "cae": { "azure_client_id": "10000000-0000-0000-0000-000000000013", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000003" },
+        "prod":{ "azure_client_id": "20000000-0000-0000-0000-000000000011", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "40000000-0000-0000-0000-000000000001" }
+      }
+    },
+    {
+      "name": "corp-products-api",
+      "type": "application",
+      "description": "Product Catalog & Pricing Engine API",
+      "protected_branches": ["main", "dev"],
+      "environments": {
+        "dev": { "azure_client_id": "10000000-0000-0000-0000-000000000021", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000001" },
+        "qa":  { "azure_client_id": "10000000-0000-0000-0000-000000000022", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000002" },
+        "cae": { "azure_client_id": "10000000-0000-0000-0000-000000000023", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "30000000-0000-0000-0000-000000000003" },
+        "prod":{ "azure_client_id": "20000000-0000-0000-0000-000000000021", "azure_tenant_id": "11111111-1111-1111-1111-111111111111", "azure_subscription_id": "40000000-0000-0000-0000-000000000001" }
+      }
+    }
+  ]
+}
+`,
+    'repositories.tf': `# /githubascode/repositories.tf
+# Dynamically loads and parses the decoupled repositories catalog
+locals {
+  raw_catalog = jsondecode(file("\${path.module}/repositories.json"))
+
+  repositories_catalog = {
+    for repo in local.raw_catalog.repositories : repo.name => {
+      name               = repo.name
+      type               = try(repo.type, "application")
+      description        = try(repo.description, "")
+      visibility         = try(repo.visibility, "private")
+      protected_branches = try(repo.protected_branches, ["main", "dev"])
+      required_approvals = try(repo.required_approvals, 1)
+      status_checks      = try(repo.status_checks, ["Terraform Unit Tests", "Terraform Plan"])
+      topics             = try(repo.topics, ["terraform"])
+      environments = {
+        for env_name, env_cfg in repo.environments : env_name => {
+          azure_client_id       = try(env_cfg.azure_client_id, "")
+          azure_tenant_id       = try(env_cfg.azure_tenant_id, "")
+          azure_subscription_id = try(env_cfg.azure_subscription_id, "")
+        }
+      }
+    }
+  }
+
+  active_repositories = length(var.repositories) > 0 ? var.repositories : local.repositories_catalog
+}
+`,
     'main.tf': `# /githubascode/main.tf
-# ---------------------------------------------------------------------------------------------------------------------
-# GITHUB-AS-CODE: PLATFORM & APPLICATION REPOSITORIES ORCHESTRATION
-# ---------------------------------------------------------------------------------------------------------------------
+# 1. Resolve designated reviewer (seniorguy@gmail.com)
+data "github_user" "approver" {
+  count    = var.prod_approver_user_id == null && var.prod_approver_username != "" ? 1 : 0
+  username = var.prod_approver_username
+}
+
+locals {
+  resolved_reviewer_ids = var.prod_approver_user_id != null ? [var.prod_approver_user_id] : (
+    length(data.github_user.approver) > 0 ? [data.github_user.approver[0].id] : []
+  )
+}
+
+# 2. Instantiate repository module for all catalog entries
 module "repositories" {
   source   = "./modules/repository"
-  for_each = var.repositories
+  for_each = local.active_repositories
 
   name                   = each.key
   description            = each.value.description
   visibility             = coalesce(each.value.visibility, "private")
   topics                 = coalesce(each.value.topics, ["terraform"])
 
-  # 1. Multi-Branch Protection ('main', 'dev', etc.)
+  # Direct commits to both 'main' and 'dev' are BLOCKED (mandatory PR + Code Owners)
   default_branch         = "main"
-  protected_branches     = coalesce(each.value.protected_branches, ["main"])
+  protected_branches     = coalesce(each.value.protected_branches, ["main", "dev"])
   enforce_admins         = true
   required_approvals     = coalesce(each.value.required_approvals, 1)
   dismiss_stale_reviews  = true
   require_code_owner_reviews = true
   status_checks          = coalesce(each.value.status_checks, ["Terraform Unit Tests", "Terraform Plan"])
 
-  # 2. Multi-Environment & Dedicated Azure OIDC Credentials ('dev', 'prod')
+  # Provision 4 environments (dev, qa, cae, prod) with dedicated Azure OIDC
   environments           = each.value.environments
+
+  # Approver gate for 'prod' (seniorguy@gmail.com, admins cannot bypass)
+  prod_reviewer_ids      = local.resolved_reviewer_ids
 }
 `,
     'variables.tf': `# /githubascode/variables.tf
-# Note: provider "github" {} natively reads temporary runner environment variables:
-#   GITHUB_TOKEN = \${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
-#   GITHUB_OWNER = \${{ github.repository_owner }}
+variable "prod_approver_email" {
+  type    = string
+  default = "seniorguy@gmail.com"
+}
+
+variable "prod_approver_username" {
+  type    = string
+  default = "seniorguy"
+}
+
+variable "prod_approver_user_id" {
+  type    = number
+  default = null
+}
 
 variable "repositories" {
-  description = "Map of all repositories to provision with their branch protection rules and environment-specific Azure OIDC credentials."
-  type = map(object({
-    description        = string
-    visibility         = optional(string, "private")
-    protected_branches = optional(list(string), ["main"])
-    topics             = optional(list(string), ["terraform"])
-    required_approvals = optional(number, 1)
-    status_checks      = optional(list(string), ["Terraform Unit Tests", "Terraform Plan"])
-    environments       = map(object({
-      azure_client_id       = string
-      azure_tenant_id       = string
-      azure_subscription_id = string
-    }))
-  }))
+  description = "Optional override map. Defaults to empty {} to auto-load /githubascode/repositories.json"
+  type        = any
+  default     = {}
 }
 `,
     'provider.tf': `# /githubascode/provider.tf
@@ -122,25 +204,28 @@ terraform {
 provider "github" {}
 `,
     'outputs.tf': `# /githubascode/outputs.tf
+output "total_repositories_count" {
+  value = length(module.repositories)
+}
+
 output "repository_urls" {
-  description = "Map of created repository names to their GitHub HTML URLs."
-  value = {
-    for name, repo in module.repositories : name => repo.html_url
-  }
+  value = { for name, repo in module.repositories : name => repo.html_url }
 }
 
 output "provisioned_environments" {
-  description = "Map of repository names to their provisioned deployment environments."
+  value = { for name, repo in module.repositories : name => repo.environments }
+}
+
+output "prod_approval_gate" {
   value = {
-    for name, repo in module.repositories : name => repo.environments
+    approver_email    = var.prod_approver_email
+    approver_username = var.prod_approver_username
+    policy            = "Required approval before production deployment. Admins cannot bypass."
   }
 }
 
 output "protected_branches" {
-  description = "Map of repository names to their protected branch patterns."
-  value = {
-    for name, repo in module.repositories : name => repo.protected_branches
-  }
+  value = { for name, repo in module.repositories : name => repo.protected_branches }
 }
 `,
     'terraform.tfvars.example': `# /githubascode/terraform.tfvars.example
@@ -355,24 +440,26 @@ output "protected_branches" { value = [for p in github_branch_protection.protect
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-cyan-400 mb-1">
               <FolderGit2 className="w-4 h-4" />
-              GitHub-as-Code Terraform Architecture (Platform & Application Repos)
+              GitHub-as-Code Enterprise Governance (Platform & Application Repositories)
             </div>
             <h2 className="text-xl font-bold text-slate-100">
-              Multi-Environment & Dual-Branch Protection with Isolated Azure OIDC
+              Dev Protection, Prod Reviewer Gate & 4-Tier OIDC Environments
             </h2>
             <p className="text-slate-400 text-xs mt-1 max-w-3xl leading-relaxed">
-              Application repositories (<code className="text-cyan-300">corp-billing-api</code>, <code className="text-cyan-300">corp-billing-web</code>, <code className="text-cyan-300">corp-products-api</code>)
-              are provisioned with both <code className="text-emerald-400">prod</code> and <code className="text-amber-400">dev</code> environments, and strict branch protection on both <code className="text-cyan-300">main</code> and <code className="text-cyan-300">dev</code> branches.
+              Enforces <strong>no direct commits to dev</strong>, requires designated approval from <strong>seniorguy@gmail.com</strong> for prod, provisions <strong>dev, qa, cae, prod</strong> with dedicated Azure OIDC, and manages hundreds of repositories via a separate <strong>repositories.json</strong> catalog.
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-2.5 text-[11px] font-mono">
+              <span className="bg-rose-950/60 text-rose-300 border border-rose-800/80 px-2 py-0.5 rounded">
+                ✓ dev Direct Commits Blocked
+              </span>
               <span className="bg-emerald-950/60 text-emerald-300 border border-emerald-800/80 px-2 py-0.5 rounded">
-                ✓ Dual-Branch Protection (main + dev)
+                ✓ prod Gate: seniorguy@gmail.com
               </span>
               <span className="bg-cyan-950/60 text-cyan-300 border border-cyan-800/80 px-2 py-0.5 rounded">
-                ✓ Dual Environments (dev + prod)
+                ✓ 4 Envs: dev, qa, cae, prod
               </span>
               <span className="bg-indigo-950/60 text-indigo-300 border border-indigo-800/80 px-2 py-0.5 rounded">
-                ✓ Dedicated OIDC SPNs Per Env
+                ✓ Decoupled repositories.json Catalog
               </span>
             </div>
           </div>
@@ -529,8 +616,8 @@ output "protected_branches" { value = [for p in github_branch_protection.protect
           </div>
 
           <div className="space-y-1 text-xs">
-            <div className="text-[11px] text-slate-500 font-mono px-2 py-1">Root Configuration</div>
-            {['main.tf', 'variables.tf', 'provider.tf', 'outputs.tf', 'terraform.tfvars.example'].map(
+            <div className="text-[11px] text-slate-500 font-mono px-2 py-1">Decoupled Catalog & Root Config</div>
+            {['repositories.json', 'repositories.tf', 'main.tf', 'variables.tf', 'provider.tf', 'outputs.tf', 'terraform.tfvars.example'].map(
               (file) => (
                 <button
                   key={file}
@@ -542,7 +629,7 @@ output "protected_branches" { value = [for p in github_branch_protection.protect
                   }`}
                 >
                   <span className="flex items-center gap-2">
-                    <FileCode className="w-3.5 h-3.5 text-slate-500" />
+                    <FileCode className={`w-3.5 h-3.5 ${file === 'repositories.json' ? 'text-amber-400' : 'text-slate-500'}`} />
                     {file}
                   </span>
                   {selectedFile === file && <ChevronRight className="w-3.5 h-3.5 text-cyan-400" />}

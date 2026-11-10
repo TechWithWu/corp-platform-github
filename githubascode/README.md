@@ -1,15 +1,34 @@
-# GitHub-as-Code: Enterprise Platform Repositories & Azure OIDC Federation
+# GitHub-as-Code: Enterprise Platform & Application Governance
 
-This Terraform configuration automates the provisioning of enterprise landing zone repositories on GitHub.
+This Terraform configuration automates the provisioning of enterprise repositories on GitHub, scaled to support hundreds of repositories with rigorous branch and environment protection.
 
-## Zero-Boilerplate Authentication (No `github_token` or `github_owner` variables)
+---
 
-The GitHub provider (`integrations/github`) automatically reads the default environment variables provided by GitHub Actions:
+## 4 Core Enterprise Governance Rules Enforced
 
-- **`GITHUB_TOKEN`**: Standard temporary installation / runner token (`${{ secrets.GITHUB_TOKEN }}` or `${{ secrets.ADMIN_GITHUB_TOKEN }}`).
-- **`GITHUB_OWNER`**: Organization or user account (`${{ github.repository_owner }}`).
+### 1. `dev` Branch Direct Commits Blocked
+- Direct `git push` to `dev` (and `main`) is strictly rejected.
+- All code changes **must** arrive via a Pull Request.
+- Requires approving reviews, Code Owner sign-off, strict linear history, and passing status checks.
+- Enforced on administrators (`enforce_admins = true`).
 
-Because these default variables are resolved automatically, `provider "github" {}` requires **no variables or hardcoded arguments**.
+### 2. Designated Approver Gate on `prod` Environment
+- Target reviewer: **`seniorguy@gmail.com`** (GitHub user: `seniorguy`).
+- Deployments or workflow runs targeting the `prod` environment are paused until approved.
+- Administrators cannot bypass this gate (`can_admins_bypass = false`).
+
+### 3. 4 Full Deployment Environments with Dedicated Azure OIDC
+Every application repository receives 4 isolated deployment environments:
+- **`dev`**: Development workload subscription & SPN
+- **`qa`**: Automated QA / Integration testing subscription & SPN
+- **`cae`**: Customer Acceptance Environment / UAT staging subscription & SPN
+- **`prod`**: Production subscription & SPN (Gated by designated approver)
+
+Each environment receives its own `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_SUBSCRIPTION_ID` stored securely in encrypted environment secrets.
+
+### 4. Scalable Decoupled Catalog (`repositories.json`)
+- To manage hundreds of repositories without editing Terraform code, all repository definitions are maintained in a separate file: **`/githubascode/repositories.json`**.
+- Onboarding repository #100 or #500 is as simple as appending a JSON object to `repositories.json` and running `terraform apply`.
 
 ---
 
@@ -17,58 +36,61 @@ Because these default variables are resolved automatically, `provider "github" {
 
 ```text
 /githubascode/
-├── main.tf                    # Instantiates module.platform_repositories for each repo
-├── provider.tf                # Clean provider block: provider "github" {} (auto env discovery)
-├── variables.tf               # Platform repository map with dedicated Azure OIDC credentials
-├── outputs.tf                 # Exports URLs, environments, and security audit status
-├── terraform.tfvars.example   # Sample input variables for dedicated Azure SPNs
+├── repositories.json          # Decoupled catalog for scaling to hundreds of repositories
+├── repositories.tf            # Dynamically parses and normalizes repositories.json
+├── main.tf                    # Instantiates module.repositories with approvals & branch rules
+├── provider.tf                # provider "github" {} (auto env discovery)
+├── variables.tf               # Approver configuration and optional catalog overrides
+├── outputs.tf                 # Exports URLs, environments, branches, and approver status
+├── terraform.tfvars.example   # Optional tfvars for approver username/email
 └── modules/
     └── repository/            # Reusable GitHub repository module
-        ├── main.tf            # github_repository, branch_protection, environment, secrets
-        ├── variables.tf       # Module input variables
+        ├── main.tf            # github_repository, branch_protection, environments, secrets
+        ├── variables.tf       # Module contracts
         └── outputs.tf         # Module outputs
 ```
 
 ---
 
-## Usage in GitHub Actions Workflow
+## Adding a New Repository to the Catalog
 
-In your CI/CD pipeline, you simply export the built-in runner variables:
+Simply append a new entry to `repositories.json`:
 
-```yaml
-jobs:
-  terraform-github:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      administration: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: hashicorp/setup-terraform@v3
-
-      - name: Terraform Apply
-        working-directory: ./githubascode
-        env:
-          # Built-in temporary variables automatically read by provider "github" {}
-          GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
-          GITHUB_OWNER: ${{ github.repository_owner }}
-        run: |
-          terraform init
-          terraform apply -auto-approve
+```json
+{
+  "name": "corp-payments-api",
+  "type": "application",
+  "description": "Payment Gateway Microservice",
+  "protected_branches": ["main", "dev"],
+  "required_approvals": 1,
+  "status_checks": ["Unit Tests", "Integration Tests"],
+  "topics": ["microservice", "payments", "api"],
+  "environments": {
+    "dev": {
+      "azure_client_id": "10000000-0000-0000-0000-000000000050",
+      "azure_tenant_id": "11111111-1111-1111-1111-111111111111",
+      "azure_subscription_id": "30000000-0000-0000-0000-000000000001"
+    },
+    "qa": {
+      "azure_client_id": "10000000-0000-0000-0000-000000000051",
+      "azure_tenant_id": "11111111-1111-1111-1111-111111111111",
+      "azure_subscription_id": "30000000-0000-0000-0000-000000000002"
+    },
+    "cae": {
+      "azure_client_id": "10000000-0000-0000-0000-000000000052",
+      "azure_tenant_id": "11111111-1111-1111-1111-111111111111",
+      "azure_subscription_id": "30000000-0000-0000-0000-000000000003"
+    },
+    "prod": {
+      "azure_client_id": "20000000-0000-0000-0000-000000000050",
+      "azure_tenant_id": "11111111-1111-1111-1111-111111111111",
+      "azure_subscription_id": "40000000-0000-0000-0000-000000000001"
+    }
+  }
+}
 ```
 
----
-
-## Local Terminal Execution
-
+Then run:
 ```bash
-# Export the standard environment variables
-export GITHUB_TOKEN="ghp_yourTemporaryPersonalAccessToken"
-export GITHUB_OWNER="your-github-org"
-
-cd githubascode
-terraform init
-terraform plan
 terraform apply
 ```

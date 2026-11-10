@@ -29,19 +29,19 @@ variable "default_branch" {
 }
 
 variable "protected_branches" {
-  description = "List of branch names that must be created and protected (e.g. ['main', 'dev'] for application repos, or ['main'] for platform repos)."
+  description = "List of branch names that must be created and protected (e.g. ['main', 'dev']). Direct commits to these branches will be rejected; all changes must arrive via approved Pull Requests."
   type        = list(string)
-  default     = ["main"]
+  default     = ["main", "dev"]
 }
 
 variable "enforce_admins" {
-  description = "Enforce branch protection rules on repository administrators."
+  description = "Enforce branch protection rules on repository administrators (no bypass)."
   type        = bool
   default     = true
 }
 
 variable "required_approvals" {
-  description = "Number of required approving pull request reviews."
+  description = "Number of required approving pull request reviews before merging."
   type        = number
   default     = 1
 }
@@ -64,19 +64,18 @@ variable "status_checks" {
   default     = ["Terraform Unit Tests", "Terraform Plan"]
 }
 
-# Multi-Environment & Dedicated Azure OIDC Credentials
+# Environments & Approvers
+variable "prod_reviewer_ids" {
+  description = "List of GitHub User IDs required to approve deployments targeting the 'prod' environment (e.g., seniorguy@gmail.com)."
+  type        = list(number)
+  default     = []
+}
+
 variable "environments" {
-  description = "Map of environments to provision (e.g., 'prod', 'dev') with dedicated Azure OIDC credentials."
+  description = "Map of environments to provision (e.g., 'dev', 'qa', 'cae', 'prod') with dedicated Azure OIDC credentials."
   type = map(object({
     azure_client_id       = string
     azure_tenant_id       = string
     azure_subscription_id = string
   }))
-  default = {
-    "prod" = {
-      azure_client_id       = ""
-      azure_tenant_id       = ""
-      azure_subscription_id = ""
-    }
-  }
 }

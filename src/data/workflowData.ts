@@ -718,7 +718,7 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     },
   },
 
-  // 2. Application Repositories (dev & prod envs, main & dev protected branches)
+  // 2. Application Repositories (dev, qa, cae, prod envs, main & dev protected branches)
   {
     name: 'corp-billing-api',
     type: 'application',
@@ -728,16 +728,28 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     requiredApprovals: 1,
     environments: {
       dev: {
-        azureClientId: 'd4e5f6a7-b8c9-0123-def4-567890123456',
-        azureTenantId: '88888888-4444-4444-4444-121212121212',
-        azureSubscriptionId: '44444444-5555-6666-7777-888888888888',
+        azureClientId: '10000000-0000-0000-0000-000000000001',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000001',
         scopeDescription: 'Billing Dev Workload Subscription',
       },
+      qa: {
+        azureClientId: '10000000-0000-0000-0000-000000000002',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000002',
+        scopeDescription: 'Billing QA Testing Subscription',
+      },
+      cae: {
+        azureClientId: '10000000-0000-0000-0000-000000000003',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000003',
+        scopeDescription: 'Billing Customer Acceptance (CAE) Subscription',
+      },
       prod: {
-        azureClientId: 'e5f6a7b8-c9d0-1234-ef01-678901234567',
-        azureTenantId: '88888888-4444-4444-4444-121212121212',
-        azureSubscriptionId: '55555555-6666-7777-8888-999999999999',
-        scopeDescription: 'Billing Production Workload Subscription',
+        azureClientId: '20000000-0000-0000-0000-000000000001',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '40000000-0000-0000-0000-000000000001',
+        scopeDescription: 'Billing Production Workload Subscription (Gate: seniorguy@gmail.com)',
       },
     },
   },
@@ -750,16 +762,28 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     requiredApprovals: 1,
     environments: {
       dev: {
-        azureClientId: 'f6a7b8c9-d0e1-2345-f012-789012345678',
-        azureTenantId: '88888888-4444-4444-4444-121212121212',
-        azureSubscriptionId: '44444444-5555-6666-7777-888888888888',
-        scopeDescription: 'Billing Dev Static Apps Subscription',
+        azureClientId: '10000000-0000-0000-0000-000000000011',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000001',
+        scopeDescription: 'Billing Web Dev Static Apps Sub',
+      },
+      qa: {
+        azureClientId: '10000000-0000-0000-0000-000000000012',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000002',
+        scopeDescription: 'Billing Web QA Testing Sub',
+      },
+      cae: {
+        azureClientId: '10000000-0000-0000-0000-000000000013',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000003',
+        scopeDescription: 'Billing Web CAE Staging Sub',
       },
       prod: {
-        azureClientId: 'a7b8c9d0-e1f2-3456-0123-890123456789',
-        azureTenantId: '88888888-4444-4444-4444-121212121212',
-        azureSubscriptionId: '55555555-6666-7777-8888-999999999999',
-        scopeDescription: 'Billing Production Static Apps Subscription',
+        azureClientId: '20000000-0000-0000-0000-000000000011',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '40000000-0000-0000-0000-000000000001',
+        scopeDescription: 'Billing Web Production Sub (Gate: seniorguy@gmail.com)',
       },
     },
   },
@@ -772,16 +796,28 @@ export const DEFAULT_PLATFORM_REPOS: PlatformRepoConfig[] = [
     requiredApprovals: 1,
     environments: {
       dev: {
-        azureClientId: 'b8c9d0e1-f2a3-4567-1234-901234567890',
-        azureTenantId: '88888888-4444-4444-4444-121212121212',
-        azureSubscriptionId: '44444444-5555-6666-7777-888888888888',
-        scopeDescription: 'Products Dev Workload Subscription',
+        azureClientId: '10000000-0000-0000-0000-000000000021',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000001',
+        scopeDescription: 'Products Dev Workload Sub',
+      },
+      qa: {
+        azureClientId: '10000000-0000-0000-0000-000000000022',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000002',
+        scopeDescription: 'Products QA Testing Sub',
+      },
+      cae: {
+        azureClientId: '10000000-0000-0000-0000-000000000023',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '30000000-0000-0000-0000-000000000003',
+        scopeDescription: 'Products CAE Staging Sub',
       },
       prod: {
-        azureClientId: 'c9d0e1f2-a3b4-5678-2345-012345678901',
-        azureTenantId: '88888888-4444-4444-4444-121212121212',
-        azureSubscriptionId: '55555555-6666-7777-8888-999999999999',
-        scopeDescription: 'Products Production Workload Subscription',
+        azureClientId: '20000000-0000-0000-0000-000000000021',
+        azureTenantId: '11111111-1111-1111-1111-111111111111',
+        azureSubscriptionId: '40000000-0000-0000-0000-000000000001',
+        scopeDescription: 'Products Production Workload Sub (Gate: seniorguy@gmail.com)',
       },
     },
   },
