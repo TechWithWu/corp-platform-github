@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------------------------------------------------
+# terraform.tfvars.example
+# ---------------------------------------------------------------------------------------------------------------------
+# Notice: github_owner and github_token are NOT needed in this tfvars file!
+# The GitHub provider automatically reads:
+#   GITHUB_TOKEN = "${{ secrets.GITHUB_TOKEN }}" (or ADMIN_GITHUB_TOKEN)
+#   GITHUB_OWNER = "${{ github.repository_owner }}"
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Platform Repositories with Dedicated Azure OIDC Entra App Credentials
+repositories = {
+  # 1. Foundation: Scoped to Management Group root / Subscription Vending
+  "corp-platform-foundation" = {
+    description           = "Enterprise governance: Management Groups, Azure Policy, RBAC baselines, and subscription vending"
+    visibility            = "private"
+    azure_client_id       = "a1b2c3d4-e5f6-7890-abcd-ef1234567890" # SPN: spn-github-platform-foundation
+    azure_tenant_id       = "88888888-4444-4444-4444-121212121212" # Azure Entra Tenant ID
+    azure_subscription_id = "11111111-2222-3333-4444-555555555555" # Management Group root / Vending Sub
+    required_approvals    = 1
+    status_checks         = ["Terraform Unit Tests", "Terraform Plan"]
+    topics                = ["azure", "landing-zone", "management-groups", "policy"]
+  }
+
+  # 2. Management: Scoped to the Central Log Analytics / Sentinel Subscription
+  "corp-platform-management" = {
+    description           = "Centralized Ops: Log Analytics, Sentinel, Azure Monitor, and alert policies"
+    visibility            = "private"
+    azure_client_id       = "b2c3d4e5-f6a7-8901-bcde-f12345678901" # SPN: spn-github-platform-management
+    azure_tenant_id       = "88888888-4444-4444-4444-121212121212" # Azure Entra Tenant ID
+    azure_subscription_id = "22222222-3333-4444-5555-666666666666" # Subscription: sub-corp-management
+    required_approvals    = 1
+    status_checks         = ["Terraform Unit Tests", "Terraform Plan"]
+    topics                = ["azure", "operations", "sentinel", "monitor"]
+  }
+
+  # 3. Connectivity: Scoped to Hub VNet / Virtual WAN / Firewall Subscription
+  "corp-platform-connectivity" = {
+    description           = "Centralized Networking: Hub VNet, Azure Firewall, VPN/ExpressRoute, and global NSG rules"
+    visibility            = "private"
+    azure_client_id       = "c3d4e5f6-a7b8-9012-cdef-123456789012" # SPN: spn-github-platform-connectivity
+    azure_tenant_id       = "88888888-4444-4444-4444-121212121212" # Azure Entra Tenant ID
+    azure_subscription_id = "33333333-4444-5555-6666-777777777777" # Subscription: sub-corp-connectivity
+    required_approvals    = 1
+    status_checks         = ["Terraform Unit Tests", "Terraform Plan"]
+    topics                = ["azure", "networking", "firewall", "hub-spoke"]
+  }
+}

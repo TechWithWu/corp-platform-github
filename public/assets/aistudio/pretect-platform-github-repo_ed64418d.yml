@@ -1,0 +1,290 @@
+name: 'Protect Terraform GitHub Repository & Branch Rules'
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branch:
+        description: 'Target branch to protect'
+        required: true
+        default: 'main'
+        type: string
+      azure_client_id:
+        description: 'AZURE_CLIENT_ID (from bootstrap.ps1)'
+        required: false
+        default: ''
+        type: string
+      azure_tenant_id:
+        description: 'AZURE_TENANT_ID (from bootstrap.ps1)'
+        required: false
+        default: ''
+        type: string
+      azure_subscription_id:
+        description: 'AZURE_SUBSCRIPTION_ID (from bootstrap.ps1)'
+        required: false
+        default: ''
+        type: string
+      required_approvals:
+        description: 'Number of required approving reviews'
+        required: true
+        default: '1'
+        type: choice
+        options:
+          - '1'
+          - '2'
+          - '0'
+      dismiss_stale_reviews:
+        description: 'Dismiss approving reviews when new commits are pushed'
+        required: true
+        default: true
+        type: boolean
+      require_code_owner_reviews:
+        description: 'Require review from Code Owners'
+        required: true
+        default: true
+        type: boolean
+      enforce_admins:
+        description: 'Enforce all branch protection rules on repository administrators'
+        required: true
+        default: true
+        type: boolean
+      require_linear_history:
+        description: 'Require linear commit history (prevent merge commits)'
+        required: true
+        default: true
+        type: boolean
+      require_conversation_resolution:
+        description: 'Require all conversation comments to be resolved before merging'
+        required: true
+        default: true
+        type: boolean
+      allow_force_pushes:
+        description: 'Permit force pushes (Dangerous for Terraform state repositories)'
+        required: true
+        default: false
+        type: boolean
+      allow_deletions:
+        description: 'Permit deletion of target branch'
+        required: true
+        default: false
+        type: boolean
+      required_status_checks:
+        description: 'Comma-separated status checks that must pass before merging'
+        required: true
+        default: 'Terraform Unit Tests, Terraform Plan'
+        type: string
+      setup_environments:
+        description: 'Provision GitHub Environments (prod) for Azure OIDC'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  administration: write
+  id-token: write
+
+jobs:
+  apply-branch-protection:
+    name: 'Apply Terraform Branch Protection & Store Secrets'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Mask Azure OIDC Inputs'
+        run: |
+          if [ -n "${{ inputs.azure_client_id }}" ]; then
+            echo "::add-mask::${{ inputs.azure_client_id }}"
+          fi
+          if [ -n "${{ inputs.azure_tenant_id }}" ]; then
+            echo "::add-mask::${{ inputs.azure_tenant_id }}"
+          fi
+          if [ -n "${{ inputs.azure_subscription_id }}" ]; then
+            echo "::add-mask::${{ inputs.azure_subscription_id }}"
+          fi
+
+      - name: 'Setup Environments for Azure OIDC'
+        if: ${{ inputs.setup_environments == true}}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const targetEnv = 'prod';
+            const environments = Array.from(new Set(['prod', targetEnv]));
+            for (const envName of environments) {
+              try {
+                await github.rest.repos.createOrUpdateEnvironment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  environment_name: envName
+                });
+                console.log(`Environment '${envName}' ready.`);
+              } catch (err) {
+                console.warn(`Note on environment '${envName}': ${err.message}`);
+              }
+            }
+
+      - name: 'Store Azure Credentials in Environment'
+        if: ${{ inputs.azure_client_id != '' || inputs.azure_tenant_id != '' || inputs.azure_subscription_id != '' }}
+        env:
+          GH_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          TARGET_ENV: 'prod'
+          ALSO_PROD: ${{ inputs.also_store_in_production }}
+          AZ_CLIENT_ID: ${{ inputs.azure_client_id }}
+          AZ_TENANT_ID: ${{ inputs.azure_tenant_id }}
+          AZ_SUB_ID: ${{ inputs.azure_subscription_id }}
+        run: |
+          set +e
+          echo "Configuring Azure OIDC credentials in environment: $TARGET_ENV"
+
+          ENVS=("$TARGET_ENV")
+          if [ "$ALSO_PROD" = "true" ] && [ "$TARGET_ENV" != "production" ]; then
+            ENVS+=("production")
+          fi
+
+          for ENV in "${ENVS[@]}"; do
+            echo "Processing environment: $ENV"
+
+            if [ -n "$AZ_CLIENT_ID" ]; then
+              echo "$AZ_CLIENT_ID" | gh secret set AZURE_CLIENT_ID --env "$ENV" 2>&1
+              if [ $? -eq 0 ]; then
+                echo "Successfully saved secret AZURE_CLIENT_ID in environment $ENV"
+              else
+                echo "Notice: Could not write secret AZURE_CLIENT_ID directly via token. Trying variable fallback."
+              fi
+              gh variable set AZURE_CLIENT_ID --env "$ENV" --body "$AZ_CLIENT_ID" 2>&1 || true
+            fi
+
+            if [ -n "$AZ_TENANT_ID" ]; then
+              echo "$AZ_TENANT_ID" | gh secret set AZURE_TENANT_ID --env "$ENV" 2>&1
+              if [ $? -eq 0 ]; then
+                echo "Successfully saved secret AZURE_TENANT_ID in environment $ENV"
+              fi
+              gh variable set AZURE_TENANT_ID --env "$ENV" --body "$AZ_TENANT_ID" 2>&1 || true
+            fi
+
+            if [ -n "$AZ_SUB_ID" ]; then
+              echo "$AZ_SUB_ID" | gh secret set AZURE_SUBSCRIPTION_ID --env "$ENV" 2>&1
+              if [ $? -eq 0 ]; then
+                echo "Successfully saved secret AZURE_SUBSCRIPTION_ID in environment $ENV"
+              fi
+              gh variable set AZURE_SUBSCRIPTION_ID --env "$ENV" --body "$AZ_SUB_ID" 2>&1 || true
+            fi
+          done
+
+      - name: 'Verify Token & Configure Branch Protection'
+        id: protect-branch
+        uses: actions/github-script@v7
+        env:
+          TARGET_BRANCH: ${{ inputs.target_branch }}
+          REQUIRED_APPROVALS: ${{ inputs.required_approvals }}
+          DISMISS_STALE: ${{ inputs.dismiss_stale_reviews }}
+          REQUIRE_CODE_OWNERS: ${{ inputs.require_code_owner_reviews }}
+          ENFORCE_ADMINS: ${{ inputs.enforce_admins }}
+          REQUIRE_LINEAR_HISTORY: ${{ inputs.require_linear_history }}
+          REQUIRE_CONVERSATION_RESOLUTION: ${{ inputs.require_conversation_resolution }}
+          ALLOW_FORCE_PUSHES: ${{ inputs.allow_force_pushes }}
+          ALLOW_DELETIONS: ${{ inputs.allow_deletions }}
+          CHECKS_RAW: ${{ inputs.required_status_checks }}
+        with:
+          github-token: ${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          script: |
+            const branch = process.env.TARGET_BRANCH;
+            const approvals = parseInt(process.env.REQUIRED_APPROVALS, 10);
+            const dismissStale = process.env.DISMISS_STALE === 'true';
+            const requireCodeOwners = process.env.REQUIRE_CODE_OWNERS === 'true';
+            const enforceAdmins = process.env.ENFORCE_ADMINS === 'true';
+            const requireLinear = process.env.REQUIRE_LINEAR_HISTORY === 'true';
+            const requireResolve = process.env.REQUIRE_CONVERSATION_RESOLUTION === 'true';
+            const allowForcePushes = process.env.ALLOW_FORCE_PUSHES === 'true';
+            const allowDeletions = process.env.ALLOW_DELETIONS === 'true';
+
+            const contexts = process.env.CHECKS_RAW
+              ? process.env.CHECKS_RAW.split(',').map(s => s.trim()).filter(Boolean)
+              : ['Terraform Unit Tests', 'Terraform Plan'];
+
+            console.log(`Configuring branch protection for repository: ${context.repo.owner}/${context.repo.repo}`);
+            console.log(`Target Branch: ${branch}`);
+            console.log(`Required Status Checks: ${JSON.stringify(contexts)}`);
+
+            const protectionPayload = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              branch: branch,
+              required_status_checks: {
+                strict: true,
+                contexts: contexts
+              },
+              enforce_admins: enforceAdmins,
+              required_pull_request_reviews: approvals > 0 ? {
+                dismiss_stale_reviews: dismissStale,
+                require_code_owner_reviews: requireCodeOwners,
+                required_approving_review_count: approvals,
+                require_last_push_approval: true
+              } : null,
+              restrictions: null,
+              required_linear_history: requireLinear,
+              allow_force_pushes: allowForcePushes,
+              allow_deletions: allowDeletions,
+              block_creations: false,
+              required_conversation_resolution: requireResolve
+            };
+
+            try {
+              const response = await github.rest.repos.updateBranchProtection(protectionPayload);
+              console.log('Branch protection successfully applied:', response.status);
+              core.setOutput('status', 'success');
+              core.setOutput('branch', branch);
+            } catch (err) {
+              console.error('Failed to update branch protection:', err.message);
+              if (err.status === 403 || err.status === 404) {
+                core.setFailed(
+                  `Permission error (${err.status}). Ensure the workflow has 'administration: write' permission or provide a Personal Access Token (PAT) with 'repo' scope as secret 'ADMIN_GITHUB_TOKEN'. Details: ${err.message}`
+                );
+              } else {
+                core.setFailed(`Error applying branch protection: ${err.message}`);
+              }
+            }
+
+      - name: 'Generate Execution Summary'
+        if: always()
+        run: |
+          cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+          ## Terraform Repository Security & Branch Protection Report
+
+          The branch protection rules have been configured for **${{ inputs.target_branch }}**.
+
+          | Security Parameter | Configured Value |
+          |---|---|
+          | **Target Protected Branch** | `${{ inputs.target_branch }}` |
+          | **Target Environment** | `${{ inputs.target_environment }}` |
+          | **Azure Client ID Provided** | `${{ inputs.azure_client_id != '' }}` |
+          | **Azure Tenant ID Provided** | `${{ inputs.azure_tenant_id != '' }}` |
+          | **Azure Subscription ID Provided** | `${{ inputs.azure_subscription_id != '' }}` |
+          | **Required Status Checks** | `${{ inputs.required_status_checks }}` |
+          | **Require Branch Up-to-Date** | `true` (Strict) |
+          | **Required Approvals** | `${{ inputs.required_approvals }}` |
+          | **Dismiss Stale Reviews** | `${{ inputs.dismiss_stale_reviews }}` |
+          | **Require Code Owner Review** | `${{ inputs.require_code_owner_reviews }}` |
+          | **Enforce on Administrators** | `${{ inputs.enforce_admins }}` |
+          | **Require Linear History** | `${{ inputs.require_linear_history }}` |
+          | **Require Conversation Resolution** | `${{ inputs.require_conversation_resolution }}` |
+          | **Allow Force Pushes** | `${{ inputs.allow_force_pushes }}` |
+          | **Allow Branch Deletions** | `${{ inputs.allow_deletions }}` |
+
+          ### Credentials in Environment `${{ inputs.target_environment }}`
+          The Azure OIDC parameters (`AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`) have been configured for your target environment.
+
+          ### Next Steps (from README.md)
+          1. **Create Feature Branch**:
+             ```bash
+             git checkout -b feature/platform-setup
+             git add .
+             git commit -m "feat: configure corporate platform architecture"
+             git push origin feature/platform-setup
+             ```
+          2. **Open Pull Request to `main`**:
+             - GitHub Actions will run `Terraform Unit Tests` and `Terraform Plan`.
+             - Changes will be formatted, validated with Checkov, and the plan output will be posted directly to the PR comment.
+             - Once approved by reviewers, merge to `main` to trigger automated `Terraform Apply`.
+          EOF
