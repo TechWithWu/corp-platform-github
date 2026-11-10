@@ -138,3 +138,32 @@ Write-Host "AZURE_TENANT_ID:      $tenantId"
 Write-Host "AZURE_SUBSCRIPTION_ID: $subscriptionId"
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host "Please add these values to GitHub Repo Secrets (Settings -> Secrets and variables -> Actions)." -ForegroundColor Yellow
+
+# 7. define the target GitHub Environment for storing secrets
+$targetEnv = "prod"
+
+Write-Host "`n==========================================" -ForegroundColor Green
+Write-Host " Storing Secrets to GitHub Environment: [$targetEnv]" -ForegroundColor Green
+Write-Host "==========================================" -ForegroundColor Green
+
+# 8. Check and ensure the Environment exists (if not, gh secret set will associate it automatically, but it's good practice to ensure variables are not empty)
+gh api -X PUT "repos/$orgName/$repoName/environments/$targetEnv" | Out-Null
+
+if (-not $appId -or -not $tenantId -or -not $subscriptionId) {
+    Write-Error "Error: One or more Azure credential variables are missing!"
+    exit
+}
+
+# 9. Write to Github Environment Secrets
+Write-Host "Setting AZURE_CLIENT_ID in environment '$targetEnv'..." -ForegroundColor Cyan
+$appId | gh secret set AZURE_CLIENT_ID --env $targetEnv
+
+Write-Host "Setting AZURE_TENANT_ID in environment '$targetEnv'..." -ForegroundColor Cyan
+$tenantId | gh secret set AZURE_TENANT_ID --env $targetEnv
+
+Write-Host "Setting AZURE_SUBSCRIPTION_ID in environment '$targetEnv'..." -ForegroundColor Cyan
+$subscriptionId | gh secret set AZURE_SUBSCRIPTION_ID --env $targetEnv
+
+Write-Host "==========================================" -ForegroundColor Green
+Write-Host " Successfully pushed credentials to GitHub 'prod' environment secrets!" -ForegroundColor Green
+Write-Host "==========================================" -ForegroundColor Green
