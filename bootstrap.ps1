@@ -58,25 +58,42 @@ az role assignment create --assignee $appId --role "Contributor" --scope "/subsc
 # [Important] Replace "YOUR_GITHUB_ORG_OR_USER/YOUR_REPO" with your actual repository path.
 $githubOrgRepo = "YOUR_GITHUB_ORG_OR_USER/YOUR_REPO"
 
+# Get Organization and Repository information from GitHub API
+Write-Host "Fetching GitHub repository and organization numeric IDs via GitHub REST API..." -ForegroundColor Cyan
+$repoRest = gh api repos/$githubOrgRepo --jq '{owner: .owner.login, owner_id: .owner.id, repo: .name, repo_id: .id}' | ConvertFrom-Json
+
+$orgName  = $repoRest.owner
+$orgId    = $repoRest.owner_id
+$repoName = $repoRest.repo
+$repoId   = $repoRest.repo_id
+
+Write-Host "-> Org: $orgName (Numeric ID: $orgId)" -ForegroundColor Green
+Write-Host "-> Repo: $repoName (Numeric ID: $repoId)" -ForegroundColor Green
+
+if (-not $orgId -or -not $repoId) {
+    Write-Error "Failed to retrieve valid numeric IDs from GitHub. Please check your network or token."
+    exit
+}
+
 # Define the list of environments and subjects you want to support
 $federatedCredentials = @(
     @{
         Name    = "github-actions-prod-env"
-        Subject = "repo:$githubOrgRepo:environment:production"
+        Subject = "repo:${orgName}@${orgId}/${repoName}@${repoId}:environment:prod"
         Desc    = "GitHub Actions OIDC for Production Environment"
     },
     @{
-        Name    = "github-actions-dev-env"
-        Subject = "repo:$githubOrgRepo:environment:development"
-        Desc    = "GitHub Actions OIDC for Development Environment"
-    },
-    @{
-        Name    = "github-actions-pr-env"
-        Subject = "repo:$githubOrgRepo:pull_request"
+        Name    = "github-actions-pr"
+        Subject = "repo:${orgName}@${orgId}/${repoName}@${repoId}:pull_request"
         Desc    = "GitHub Actions OIDC for Pull Request Validation"
     }
 )
+# Checking the federated credentials
+foreach ($c in $federatedCredentials) {
+    Write-Host "Name: $($c.Name) | Subject: $($c.Subject)" -ForegroundColor Cyan
+}
 
+# Create federated credentials if they do not already exist
 foreach ($cred in $federatedCredentials) {
     $credentialName = $cred.Name
     $subject = $cred.Subject
@@ -87,13 +104,26 @@ foreach ($cred in $federatedCredentials) {
 
     if ([int]$existingCred -eq 0) {
         Write-Host "Creating OIDC Federated Credential [$credentialName]..." -ForegroundColor Yellow
-        az ad app federated-credential create --id $appObjectId --parameters "{
-            `"name`": `"$credentialName`",
-            `"issuer`": `"https://token.actions.githubusercontent.com`",
-            `"subject`": `"$subject`",
-            `"description`": `"$description`",
-            `"audiences`": [`"api://AzureADTokenExchange`"]
-        }" | Out-Null
+        
+        # Build the payload object
+        $params = @{
+            name        = $credentialName
+            issuer      = "https://token.actions.githubusercontent.com"
+            subject     = $subject
+            description = $description
+            audiences   = @("api://AzureADTokenExchange")
+        }
+
+        # Write to a temporary JSON file to avoid all inline escaping/quoting problems
+        $tempFile = [System.IO.Path]::GetTempFileName()
+        $params | ConvertTo-Json -Compress | Set-Content -Path $tempFile -Encoding utf8
+
+        try {
+            az ad app federated-credential create --id $appObjectId --parameters "@$tempFile" | Out-Null
+        } finally {
+            # Clean up the temp file
+            if (Test-Path $tempFile) { Remove-Item $tempFile -Force }
+        }
     } else {
         Write-Host "Federated credential '$credentialName' already exists. Skipping." -ForegroundColor Green
     }
