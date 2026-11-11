@@ -29,11 +29,10 @@ jobs:
           OWNER: "corp-techwithwu"  # 强制写死为组织名，排除上下文解析错误
           REPO: ${{ inputs.target_repo }}
         run: |
-          echo "使用纯 Curl 直接请求 GitHub API (强制指定组织: $OWNER)..."
-          HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
-            -H "Authorization: Bearer $APP_TOKEN" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/$OWNER/$REPO")
+          echo "检查当前 Token 实际可见的仓库列表..."
+          curl -s -H "Authorization: Bearer $APP_TOKEN" \
+               -H "Accept: application/vnd.github+json" \
+               "https://api.github.com/installation/repositories" > visible_repos.json
           
-          echo "HTTP Status Code: $HTTP_CODE"
-          cat response.json
+          echo "当前 Token 视野内的仓库有："
+          jq -r '.repositories[].full_name' visible_repos.json
