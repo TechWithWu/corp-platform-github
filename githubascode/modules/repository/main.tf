@@ -1,5 +1,4 @@
 # checkov:skip=CKV_GIT_4: Terraform provider handles GitHub Actions secrets encryption client-side
-
 terraform {
   required_providers {
     github = {
