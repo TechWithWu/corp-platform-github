@@ -22,6 +22,7 @@ jobs:
         with:
           app-id: ${{ vars.CORP_PLATFORM_GITHUB_APP_ID }}
           private-key: ${{ secrets.CORP_PLATFORM_GITHUB_APP_SECRET }}
+          repositories: 'corp-platform-github, corp-platform-foundation, corp-platform-management'
 
       - name: 'Test Token Permissions via Pure Curl'
         env:
