@@ -1,4 +1,3 @@
-# checkov:skip=CKV_GIT_4: Terraform provider handles GitHub Actions secrets encryption client-side
 terraform {
   required_providers {
     github = {
@@ -91,6 +90,7 @@ resource "github_actions_environment_secret" "azure_client_id" {
   repository      = github_repository.this.name
   environment     = github_repository_environment.environments[each.key].environment
   secret_name     = "AZURE_CLIENT_ID"
+  # checkov:skip=CKV_GIT_4: Terraform provider handles GitHub Actions secrets encryption client-side
   plaintext_value = each.value.azure_client_id
 }
 
@@ -104,6 +104,7 @@ resource "github_actions_environment_secret" "azure_tenant_id" {
   repository      = github_repository.this.name
   environment     = github_repository_environment.environments[each.key].environment
   secret_name     = "AZURE_TENANT_ID"
+  # checkov:skip=CKV_GIT_4: Terraform provider handles GitHub Actions secrets encryption client-side
   plaintext_value = each.value.azure_tenant_id
 }
 
@@ -117,5 +118,6 @@ resource "github_actions_environment_secret" "azure_subscription_id" {
   repository      = github_repository.this.name
   environment     = github_repository_environment.environments[each.key].environment
   secret_name     = "AZURE_SUBSCRIPTION_ID"
+  # checkov:skip=CKV_GIT_4: Terraform provider handles GitHub Actions secrets encryption client-side
   plaintext_value = each.value.azure_subscription_id
 }
