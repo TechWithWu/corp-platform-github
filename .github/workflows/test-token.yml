@@ -11,6 +11,7 @@ on:
 jobs:
   test-token:
     runs-on: ubuntu-latest
+    environment: prod
     steps:
       - name: 'Checkout Repository'
         uses: actions/checkout@v4
