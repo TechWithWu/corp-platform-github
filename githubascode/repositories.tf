@@ -9,7 +9,7 @@
 
 locals {
   # 1. Load the decoupled catalog file
-  raw_catalog = jsondecode(file("\${path.module}/repositories.json"))
+  raw_catalog = jsondecode(file("${path.module}/repositories.json"))
 
   # 2. Normalize and index repositories by name
   repositories_catalog = {

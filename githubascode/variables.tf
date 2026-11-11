@@ -18,11 +18,11 @@ variable "repositories" {
     protected_branches = optional(list(string), ["main", "dev"])
     topics             = optional(list(string), ["terraform"])
     required_approvals = optional(number, 1)
-    prod_approvers     = optional(list(object({
+    prod_approvers = optional(list(object({
       email    = string
       username = string
     })), [])
-    environments       = map(object({
+    environments = map(object({
       azure_client_id       = string
       azure_tenant_id       = string
       azure_subscription_id = string

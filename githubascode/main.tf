@@ -2,7 +2,7 @@
 # GITHUB-AS-CODE: SCALABLE ENTERPRISE PLATFORM & APPLICATION REPOSITORIES ORCHESTRATION
 # ---------------------------------------------------------------------------------------------------------------------
 # 1. Loads repository definitions from the decoupled /githubascode/repositories.json catalog
-# 2. Blocks direct commits to both 'main' and 'dev' (enforces Pull Requests & Code Owners)
+# 2. Blocks direct commits to both 'main' and 'develop' (enforces Pull Requests & Code Owners)
 # 3. Requires designated per-repository reviewer approvals for the 'prod' deployment environment
 # 4. Provisions 4 isolated environments: 'dev', 'qa', 'cae', and 'prod', each with dedicated Azure OIDC credentials
 # 5. Pipeline status checks are decoupled to allow each repository to define its own CI/CD workflow
@@ -34,10 +34,10 @@ module "repositories" {
   source   = "./modules/repository"
   for_each = local.active_repositories
 
-  name                   = each.key
-  description            = each.value.description
-  visibility             = coalesce(each.value.visibility, "private")
-  topics                 = coalesce(each.value.topics, ["terraform"])
+  name        = each.key
+  description = each.value.description
+  visibility  = coalesce(each.value.visibility, "private")
+  topics      = coalesce(each.value.topics, ["terraform"])
 
   # 1. Multi-Branch Protection: Direct commits to 'main' & 'dev' are strictly BLOCKED
   # (Status checks omitted so each repository can freely execute its own custom pipeline)

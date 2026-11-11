@@ -1,0 +1,62 @@
+name: 'Create Terraform State Storage'
+
+on:
+  workflow_dispatch:
+    inputs:
+      subscription_id:
+        description: 'Azure Subscription ID'
+        required: true
+        default: 'c5c80e22-450e-430a-b952-42a8b9307812'
+        type: string
+      state_rg_name:
+        description: 'Resource Group Name for State'
+        required: false
+        default: 'rg-terraform-state-prod'
+        type: string
+      state_sa_name:
+        description: 'Storage Account Name for State'
+        required: false
+        default: 'stcorpghasstateprod'
+        type: string
+      state_container_name:
+        description: 'Blob Container Name for State'
+        required: false
+        default: 'tfstate'
+        type: string
+      state_location:
+        description: 'Azure Region Location'
+        required: false
+        default: 'eastus'
+        type: string
+
+permissions:
+  id-token: write  # Required for Azure OIDC Login
+  contents: read
+
+jobs:
+  create-storage:
+    name: 'Ensure Terraform Storage Backend'
+    runs-on: ubuntu-latest
+    environment: prod
+
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Azure CLI Login (OIDC Passwordless)'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ inputs.subscription_id }}
+
+      - name: 'Run Storage Provisioning Script'
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            bash ./scripts/create-terraform-storage.sh \
+              "${{ inputs.subscription_id }}" \
+              "${{ inputs.state_rg_name }}" \
+              "${{ inputs.state_sa_name }}" \
+              "${{ inputs.state_container_name }}" \
+              "${{ inputs.state_location }}"
