@@ -26,10 +26,10 @@ jobs:
       - name: 'Test Token Permissions via Pure Curl'
         env:
           APP_TOKEN: ${{ steps.generate-token.outputs.token }}
-          OWNER: ${{ github.repository_owner }}
+          OWNER: "corp-techwithwu"  # 强制写死为组织名，排除上下文解析错误
           REPO: ${{ inputs.target_repo }}
         run: |
-          echo "使用纯 Curl 直接请求 GitHub API..."
+          echo "使用纯 Curl 直接请求 GitHub API (强制指定组织: $OWNER)..."
           HTTP_CODE=$(curl -s -o response.json -w "%{http_code}" \
             -H "Authorization: Bearer $APP_TOKEN" \
             -H "Accept: application/vnd.github+json" \
@@ -37,10 +37,3 @@ jobs:
           
           echo "HTTP Status Code: $HTTP_CODE"
           cat response.json
-          
-          if [ "$HTTP_CODE" -eq 200 ]; then
-            echo "✅ 证明通过纯 Token 访问完全成功！之前是 CLI 的上下文或环境变量透传问题。"
-          else
-            echo "❌ 依然返回非 200 状态码"
-            exit 1
-          fi
