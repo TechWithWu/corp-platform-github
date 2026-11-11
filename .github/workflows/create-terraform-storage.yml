@@ -54,7 +54,7 @@ jobs:
         uses: azure/cli@v2
         with:
           inlineScript: |
-            bash ./scripts/create-terraform-storage.sh \
+            bash "$GITHUB_WORKSPACE/scripts/create-terraform-storage.sh" \
               "${{ inputs.subscription_id }}" \
               "${{ inputs.state_rg_name }}" \
               "${{ inputs.state_sa_name }}" \
