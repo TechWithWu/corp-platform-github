@@ -40,6 +40,9 @@ $currentSubName = (az account show --query name -o tsv 2>$null)
 if ($currentSubName -ne $subName) {
     Write-Host "Setting active subscription context to: $subName..." -ForegroundColor Cyan
     az account set --subscription $subName
+
+    Write-Host "Registering required Azure providers for subscription '$subName'..." -ForegroundColor Cyan
+    az provider register --namespace 'Microsoft.Storage'
 } else {
     Write-Host "Active subscription is already set to '$subName'. Skipping context switch." -ForegroundColor Green
 }
