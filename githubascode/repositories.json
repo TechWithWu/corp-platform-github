@@ -70,7 +70,7 @@
       "name": "corp-billing-api",
       "type": "application",
       "description": "Billing Microservice API: invoice generation, payment gateways, and usage metering",
-      "protected_branches": ["main", "dev"],
+      "protected_branches": ["main", "develop"],
       "required_approvals": 1,
       "prod_approvers": [
         {
@@ -110,7 +110,7 @@
       "name": "corp-billing-web",
       "type": "application",
       "description": "Billing Customer Portal: self-service invoicing and billing dashboard frontend",
-      "protected_branches": ["main", "dev"],
+      "protected_branches": ["main", "develop"],
       "required_approvals": 1,
       "prod_approvers": [
         {
@@ -150,7 +150,7 @@
       "name": "corp-products-api",
       "type": "application",
       "description": "Product Catalog & Pricing Engine: high-performance product queries and pricing rules",
-      "protected_branches": ["main", "dev"],
+      "protected_branches": ["main", "develop"],
       "required_approvals": 1,
       "prod_approvers": [
         {

@@ -1,6 +1,0 @@
-{
-  "name": "Pipeline Purifier - GitHub Actions & Azure OIDC Governance",
-  "description": "Purify GitHub Actions workflows by decoupling branch protection from cloud secret injection, eliminating plaintext dispatch risks, and enforcing least privilege.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

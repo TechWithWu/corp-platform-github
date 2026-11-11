@@ -22,6 +22,7 @@ jobs:
   terraform-unit-tests:
     name: 'Terraform Unit Tests'
     runs-on: ubuntu-latest
+    environment: prod
     
     steps:
     - name: Checkout

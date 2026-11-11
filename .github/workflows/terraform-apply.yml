@@ -37,6 +37,7 @@ jobs:
   terraform-test-and-plan:
     name: 'Terraform Test & Plan'
     runs-on: ubuntu-latest
+    environment: prod
     defaults:
       run:
         working-directory: githubascode
@@ -135,8 +136,7 @@ jobs:
     # Apply only triggers on direct push or manual dispatch on main branch
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    # GitHub Environment protection rule pauses execution and waits for designated approvers to approve
-    environment: production
+    environment: prod
     defaults:
       run:
         working-directory: githubascode
@@ -179,7 +179,7 @@ jobs:
           cat << 'EOF' >> $GITHUB_STEP_SUMMARY
           ## ✅ GitHub-as-Code Terraform Apply Completed
 
-          - **Environment**: \`production\` (Approved by designated gatekeepers)
+          - **Environment**: \`prod\` (Approved by designated gatekeepers)
           - **Trigger**: \`${{ github.event_name }}\` on \`${{ github.ref_name }}\`
           - **Commit**: \`${{ github.sha }}\`
           - **Status**: Finished applying verified Terraform plan.
