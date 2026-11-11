@@ -21,7 +21,6 @@ resource "github_repository" "this" {
   allow_merge_commit     = false
   allow_squash_merge     = true
   allow_rebase_merge     = false
-  topics                 = var.topics
 }
 
 # 2. Create Additional Branches (e.g. 'dev') if specified in protected_branches

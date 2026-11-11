@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 # ==========================================
 $subName       = "corp-platform-bootstrap-prod"
 $aliasName     = "corp-platform-bootstrap-prod-alias"
-$githubOrgRepo = "TechWithWu/corp-platform-github"
+$githubOrgRepo = "corp-techwithwu/corp-platform-github"
 
 $scriptsDir = Join-Path -Path $PSScriptRoot -ChildPath "scripts"
 
@@ -33,10 +33,10 @@ if ([string]::IsNullOrWhiteSpace($subscriptionId) -or [string]::IsNullOrWhiteSpa
 }
 
 # ==========================================
-# 3. Configure Azure AD OIDC & GitHub Secrets
+# 3. Configure Azure AD OIDC
 # ==========================================
 Write-Host "`n==========================================" -ForegroundColor Green
-Write-Host " Step 2: Configuring Azure OIDC & GitHub Secrets" -ForegroundColor Green
+Write-Host " Step 2: Configuring Azure OIDC" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
 
 $oidcScript = Join-Path -Path $scriptsDir -ChildPath "configureOIDC.ps1"
@@ -44,17 +44,3 @@ $oidcScript = Join-Path -Path $scriptsDir -ChildPath "configureOIDC.ps1"
     -githubOrgRepo $githubOrgRepo `
     -subscriptionId $subscriptionId `
     -tenantId $tenantId
-
-# ==========================================
-# 4. Configure GitHub Repository Branch Protection
-# ==========================================
-Write-Host "`n==========================================" -ForegroundColor Green
-Write-Host " Step 3: Applying GitHub Branch Protection Rules" -ForegroundColor Green
-Write-Host "==========================================" -ForegroundColor Green
-
-$branchScript = Join-Path -Path $scriptsDir -ChildPath "branchProtection.ps1"
-& $branchScript -githubOrgRepo $githubOrgRepo
-
-Write-Host "`n==========================================" -ForegroundColor Green
-Write-Host " Bootstrap Execution Completed Successfully!" -ForegroundColor Green
-Write-Host "==========================================" -ForegroundColor Green
