@@ -8,11 +8,6 @@ on:
     branches:
       - main
 
-env:
-  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
 permissions:
   id-token: write
   contents: read
@@ -22,7 +17,6 @@ jobs:
   terraform-unit-tests:
     name: 'Terraform Unit Tests'
     runs-on: ubuntu-latest
-    environment: prod
     
     steps:
     - name: Checkout
@@ -31,14 +25,6 @@ jobs:
     # Install Terraform CLI
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
-
-    # Azure OIDC Authenticate (For Provider to access Azure resources)
-    - name: 'Az CLI login'
-      uses: azure/login@v2
-      with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     # Validate code format
     - name: Terraform Format Check
