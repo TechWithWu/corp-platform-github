@@ -116,23 +116,3 @@ Write-Host "AZURE_CLIENT_ID:       $appId"
 Write-Host "AZURE_TENANT_ID:       $tenantId"
 Write-Host "AZURE_SUBSCRIPTION_ID: $subscriptionId"
 Write-Host "==========================================" -ForegroundColor Green
-
-# 5. Push Secrets to GitHub Environment
-$targetEnv = "prod"
-
-Write-Host "`n==========================================" -ForegroundColor Green
-Write-Host " Storing Secrets to GitHub Environment: [$targetEnv]" -ForegroundColor Green
-Write-Host "==========================================" -ForegroundColor Green
-
-gh api -X PUT "repos/$orgName/$repoName/environments/$targetEnv" | Out-Null
-
-Write-Host "Setting AZURE_CLIENT_ID in environment '$targetEnv'..." -ForegroundColor Cyan
-$appId | gh secret set AZURE_CLIENT_ID --env $targetEnv
-
-Write-Host "Setting AZURE_TENANT_ID in environment '$targetEnv'..." -ForegroundColor Cyan
-$tenantId | gh secret set AZURE_TENANT_ID --env $targetEnv
-
-Write-Host "Setting AZURE_SUBSCRIPTION_ID in environment '$targetEnv'..." -ForegroundColor Cyan
-$subscriptionId | gh secret set AZURE_SUBSCRIPTION_ID --env $targetEnv
-
-Write-Host "Successfully pushed credentials to GitHub '$targetEnv' environment secrets!" -ForegroundColor Green

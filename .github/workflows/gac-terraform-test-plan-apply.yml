@@ -20,15 +20,6 @@ permissions:
   pull-requests: write   # Required to post plan output to PR comments
   issues: write          # Required for GitHub Script REST API commenting
 
-env:
-  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-  ARM_USE_OIDC: true
-  GITHUB_TOKEN: ${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
-  GITHUB_OWNER: ${{ github.repository_owner }}
-  TF_IN_AUTOMATION: 'true'
-
 jobs:
   terraform-test-and-plan:
     name: 'Terraform Test & Plan'
@@ -41,6 +32,13 @@ jobs:
     steps:
       - name: 'Checkout Repository'
         uses: actions/checkout@v4
+
+      - name: 'Generate GitHub App Token'
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app_id: ${{ secrets.CORP_PLATFORM_GITHUB_APP_ID }}
+          private_key: ${{ secrets.CORP_PLATFORM_GITHUB_APP_SECRET }}
 
       - name: 'Setup Terraform CLI'
         uses: hashicorp/setup-terraform@v3
@@ -61,20 +59,36 @@ jobs:
 
       - name: 'Terraform Init (Azure Storage State Backend)'
         id: init
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          TF_IN_AUTOMATION: 'true'
         run: terraform init
 
       - name: 'Terraform Validate'
-        id: validate
         run: terraform validate
 
       - name: 'Terraform Test'
         id: test
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
           echo "Executing native Terraform test suites..."
           terraform test
 
       - name: 'Terraform Plan'
         id: plan
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+          TF_IN_AUTOMATION: 'true'
         run: |
           terraform plan -no-color -out=tfplan > plan.out
           cat plan.out
@@ -107,8 +121,9 @@ jobs:
         uses: actions/github-script@v7
         env:
           SUMMARY: ${{ steps.plan-summary.outputs.summary }}
+          APP_TOKEN: ${{ steps.generate-token.outputs.token }}
         with:
-          github-token: ${{ secrets.ADMIN_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
+          github-token: ${{ env.APP_TOKEN }}
           script: |
             const body = process.env.SUMMARY;
             await github.rest.issues.createComment({
@@ -141,6 +156,13 @@ jobs:
       - name: 'Checkout Repository'
         uses: actions/checkout@v4
 
+      - name: 'Generate GitHub App Token'
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app_id: ${{ secrets.CORP_PLATFORM_GITHUB_APP_ID }}
+          private_key: ${{ secrets.CORP_PLATFORM_GITHUB_APP_SECRET }}
+
       - name: 'Setup Terraform CLI'
         uses: hashicorp/setup-terraform@v3
         with:
@@ -161,10 +183,25 @@ jobs:
           path: githubascode
 
       - name: 'Terraform Init (Azure Storage State Backend)'
+        env:
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          GITHUB_OWNER: ${{ github.repository_owner }}
+          TF_IN_AUTOMATION: 'true'
         run: terraform init
 
       - name: 'Terraform Apply Approved Plan'
         id: apply
+        env:
+          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
+          ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          ARM_USE_OIDC: true
+          TF_IN_AUTOMATION: 'true'
         run: |
           echo "Approver review completed. Applying pre-computed plan..."
           terraform apply -auto-approve tfplan
