@@ -4,13 +4,9 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'githubascode/**'
   pull_request:
     branches:
       - main
-    paths:
-      - 'githubascode/**'
   workflow_dispatch:
 
 # Ensure only one Terraform execution runs at a time per ref; never cancel running jobs mid-state!
