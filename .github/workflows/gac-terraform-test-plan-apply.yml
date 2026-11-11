@@ -37,8 +37,8 @@ jobs:
         id: generate-token
         uses: actions/create-github-app-token@v1
         with:
-          app_id: ${{ secrets.CORP_PLATFORM_GITHUB_APP_ID }}
-          private_key: ${{ secrets.CORP_PLATFORM_GITHUB_APP_SECRET }}
+          app-id: ${{ secrets.CORP_PLATFORM_GITHUB_APP_ID }}
+          private-key: ${{ secrets.CORP_PLATFORM_GITHUB_APP_SECRET }}
 
       - name: 'Setup Terraform CLI'
         uses: hashicorp/setup-terraform@v3
@@ -160,8 +160,8 @@ jobs:
         id: generate-token
         uses: actions/create-github-app-token@v1
         with:
-          app_id: ${{ secrets.CORP_PLATFORM_GITHUB_APP_ID }}
-          private_key: ${{ secrets.CORP_PLATFORM_GITHUB_APP_SECRET }}
+          app-id: ${{ secrets.CORP_PLATFORM_GITHUB_APP_ID }}
+          private-key: ${{ secrets.CORP_PLATFORM_GITHUB_APP_SECRET }}
 
       - name: 'Setup Terraform CLI'
         uses: hashicorp/setup-terraform@v3
