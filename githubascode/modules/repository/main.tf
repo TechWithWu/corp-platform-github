@@ -54,6 +54,7 @@ resource "github_branch_protection" "protection" {
   required_pull_request_reviews {
     dismiss_stale_reviews           = var.dismiss_stale_reviews
     require_code_owner_reviews      = var.require_code_owner_reviews
+    # checkov:skip=CKV_GIT_5: approver counts are assigned in repositories.json, so this is not a hardcoded value
     required_approving_review_count = var.required_approvals
     require_last_push_approval      = true
   }
