@@ -1,0 +1,52 @@
+name: 'Test GitHub App Token Repository Access'
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: '要测试的仓库名称 (例如: corp-platform-foundation)'
+        required: true
+        default: 'corp-platform-foundation'
+
+jobs:
+  test-token:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@v4
+
+      - name: 'Generate GitHub App Token'
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.CORP_PLATFORM_GITHUB_APP_ID }}
+          private-key: ${{ secrets.CORP_PLATFORM_GITHUB_APP_SECRET }}
+
+      - name: 'Test Token Permissions via GitHub API'
+        env:
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ inputs.target_repo }}
+        run: |
+          echo "=========================================="
+          echo "1. 验证当前 Token 的身份 (Authenticated User/App):"
+          echo "=========================================="
+          gh api user || echo "⚠️ 无法获取用户信息（App Token 正常现象，通常是 Bot 身份）"
+          
+          echo ""
+          echo "=========================================="
+          echo "2. 尝试调用 API 获取目标仓库 ($OWNER/$REPO) 的详细信息:"
+          echo "=========================================="
+          if gh api "repos/$OWNER/$REPO" --jq '{id: .id, name: .name, full_name: .full_name, visibility: .visibility}' ; then
+            echo "✅ 成功！GitHub App Token 能够正常访问该仓库，API 层面完全可见！"
+          else
+            echo "❌ 失败！GitHub App Token 无法访问该仓库（返回 404 或 403）"
+            echo "👉 这说明该 Token 的视野里没有这个仓库，或者仓库根本不存在。"
+            exit 1
+          fi
+
+          echo ""
+          echo "=========================================="
+          echo "3. 尝试调用 API 列出组织 ($OWNER) 下的所有仓库:"
+          echo "=========================================="
+          gh api "orgs/$OWNER/repos" --jq '.[].name'
