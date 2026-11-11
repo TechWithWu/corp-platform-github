@@ -44,10 +44,10 @@ module "repositories" {
   default_branch             = "main"
   protected_branches         = coalesce(each.value.protected_branches, ["main", "dev"])
   enforce_admins             = true
-  required_approvals         = coalesce(each.value.required_approvals, 1)
+  required_approvals         = coalesce(each.value.required_approvals, 2)
   dismiss_stale_reviews      = true
   require_code_owner_reviews = true
-
+  
   # 2. Multi-Environment & Dedicated Azure OIDC Credentials ('dev', 'qa', 'cae', 'prod')
   environments = each.value.environments
 

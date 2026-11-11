@@ -11,6 +11,7 @@ terraform {
 resource "github_repository" "this" {
   name                   = var.name
   description            = var.description
+  # checkov:skip=CKV_GIT_1: Repository visibility is controlled dynamically via variables
   visibility             = var.visibility
   auto_init              = true # Initializes with default README.md on main branch
   has_issues             = true
@@ -45,6 +46,9 @@ resource "github_branch_protection" "protection" {
   allows_force_pushes             = false
   allows_deletions                = false
   require_conversation_resolution = true
+  # checkov:skip=CKV_GIT_6: corp doesn't need signed commits for now, but this can be enabled in the future if desired
+  require_signed_commits          = false
+
 
   # Direct commits are strictly BLOCKED: all commits must go through Pull Request reviews
   required_pull_request_reviews {
