@@ -1,3 +1,3 @@
 repository,environment,can_admins_bypass,prevent_self_review,wait_timer,reviewer_users,reviewer_teams
 corp-platform-github,dev,true,false,0,"",""
-corp-platform-github,prod,false,true,0,"techwithwu","IT Team"
+corp-platform-github,prod,false,true,0,"techwithwu","it-team"

@@ -15,8 +15,8 @@ resource "github_repository_environment" "this" {
     for_each = length(concat(each.value.reviewer_users, each.value.reviewer_teams)) > 0 ? [1] : []
 
     content {
-      users = [for u in each.value.reviewer_users : tonumber(data.github_user.reviewers[u].id)]
-      teams = [for t in each.value.reviewer_teams : data.github_team.reviewers[t].id]
+      users = each.value.reviewer_users
+      teams = each.value.reviewer_teams
     }
   }
 }
