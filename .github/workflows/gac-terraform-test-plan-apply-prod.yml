@@ -9,6 +9,7 @@ on:
       - main
   workflow_dispatch:
 
+
 # Ensure only one Terraform execution runs at a time per ref; never cancel running jobs mid-state!
 concurrency:
   group: gac-terraform-${{ github.ref }}
@@ -20,11 +21,13 @@ permissions:
   pull-requests: write   # Required to post plan output to PR comments
   issues: write          # Required for GitHub Script REST API commenting
 
+env:
+  TF_ENV: prod 
+
 jobs:
   terraform-test-and-plan:
     name: 'Terraform Test & Plan'
     runs-on: ubuntu-latest
-    environment: prod
     defaults:
       run:
         working-directory: githubascode
@@ -65,34 +68,25 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-          GITHUB_OWNER: "corp-techwithwu"
+          GITHUB_OWNER: ${{ github.repository_owner }}
           TF_IN_AUTOMATION: 'true'
-        run: terraform init
+        run: terraform init -backend-config="env/${{ env.TF_ENV }}/backend.hcl"
 
       - name: 'Terraform Validate'
         run: terraform validate
-
-      - name: 'Terraform Test'
-        id: test
-        env:
-          GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-          GITHUB_OWNER: "corp-techwithwu"
-        run: |
-          echo "Executing native Terraform test suites..."
-          terraform test
 
       - name: 'Terraform Plan'
         id: plan
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-          GITHUB_OWNER: "corp-techwithwu"
+          GITHUB_OWNER: ${{ github.repository_owner }}
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
           TF_IN_AUTOMATION: 'true'
         run: |
-          terraform plan -no-color -out=tfplan > plan.out
+          terraform plan -backend-config="env/${{ env.TF_ENV }}/backend.hcl" -var-file="env/${{ env.TF_ENV }}/terraform.tfvars" -no-color -out=tfplan > plan.out
           cat plan.out
 
       - name: 'Format Plan Summary'
@@ -191,15 +185,15 @@ jobs:
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
           ARM_USE_OIDC: true
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-          GITHUB_OWNER: "corp-techwithwu"
+          GITHUB_OWNER: ${{ github.repository_owner }}
           TF_IN_AUTOMATION: 'true'
-        run: terraform init
+        run: terraform init -backend-config="env/${{ env.TF_ENV }}/backend.hcl"
 
       - name: 'Terraform Apply Approved Plan'
         id: apply
         env:
           GITHUB_TOKEN: ${{ steps.generate-token.outputs.token }}
-          GITHUB_OWNER: "corp-techwithwu"
+          GITHUB_OWNER: ${{ github.repository_owner }}
           ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
@@ -207,7 +201,7 @@ jobs:
           TF_IN_AUTOMATION: 'true'
         run: |
           echo "Approver review completed. Applying pre-computed plan..."
-          terraform apply -auto-approve tfplan
+          terraform apply -auto-approve -backend-config="env/${{ env.TF_ENV }}/backend.hcl" -var-file="env/${{ env.TF_ENV }}/terraform.tfvars"  tfplan
 
       - name: 'Publish Apply Report to Summary'
         if: always()

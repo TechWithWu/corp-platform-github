@@ -3,10 +3,12 @@ name: 'Terraform Unit Tests'
 on:
   push:
     branches:
-      - main  
+      - main
+      - dev
   pull_request:
     branches:
       - main
+      - dev
 
 permissions:
   id-token: write
@@ -41,13 +43,13 @@ jobs:
       run: terraform validate
       working-directory: githubascode
 
-    # Use Checkov to scan Terraform code for security issues (指定扫描子目录)
+    # Use Checkov to scan Terraform code for security issues
     - name: Run Checkov action
       id: checkov
       uses: bridgecrewio/checkov-action@master
       with: 
         framework: terraform
-        directory: githubascode
+        directory: githubascode # scan the githubascode directory
 
     # Upload SARIF report to GitHub Advanced Security
     - name: Upload SARIF file
