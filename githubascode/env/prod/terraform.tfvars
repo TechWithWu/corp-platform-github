@@ -1,1 +1,1 @@
-owner = "corp-techwithwu"
+github_owner = "corp-techwithwu"

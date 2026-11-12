@@ -11,14 +11,8 @@ terraform {
     }
   }
 
-  terraform {
-    backend "azurerm" {
-      resource_group_name  = "rg-tfstate-prod"
-      storage_account_name = "sttfstateplatformasgithubprod"
-      container_name       = "tfstate"
-      key                  = "corpplatformasgithub.tfstate"
-      use_oidc             = true
-    }
+  backend "azurerm" {
+    use_oidc      = true
   }
 }
 
