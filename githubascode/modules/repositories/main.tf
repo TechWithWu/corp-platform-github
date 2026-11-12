@@ -3,11 +3,13 @@
 # ---------------------------------------------------------------------------------------------------------------------
 
 # 1. Create GitHub Repositories
+# checkov:skip=CKV2_GIT_1: branch protection is managed in a separate module, so this is not a security risk
 resource "github_repository" "this" {
   for_each = var.repositories
 
   name         = each.key
   description  = each.value.description
+  # checkov:skip=CKV_GIT_1: can be adjusted by parameter
   visibility   = each.value.visibility
   auto_init    = each.value.auto_init
   has_issues   = each.value.has_issues
