@@ -80,8 +80,24 @@ locals {
       can_admins_bypass   = try(row.can_admins_bypass, "false") == "true"
       prevent_self_review = try(row.prevent_self_review, "true") == "true"
       wait_timer          = try(tonumber(row.wait_timer), 0)
+      reviewer_users = [
+        for x in split(";", try(row.reviewer_users, "")) : trimspace(x)
+        if trimspace(x) != "" && trimspace(x) != "\"\""
+      ]
+      reviewer_teams = [
+        for x in split(";", try(row.reviewer_teams, "")) : trimspace(x)
+        if trimspace(x) != "" && trimspace(x) != "\"\""
+      ]
     } if trimspace(try(row.repository, "")) != "" && trimspace(try(row.environment, "")) != ""
   }
+
+  all_user_names = sort(distinct(flatten([
+    for v in local.environments_data : v.reviewer_users
+  ])))
+
+  all_team_slugs = sort(distinct(flatten([
+    for v in local.environments_data : v.reviewer_teams
+  ])))
 
   # 5. Parse Branch Protection Rules per Repository (config/branch_protection.csv)
   branch_protection_raw = csvdecode(file("${local.config_path}/branch_protection.csv"))
