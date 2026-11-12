@@ -1,38 +1,149 @@
-walk through:
-Prerequisites:
-* As GithubAsCode is designed for organization, so you need to create a Organization.
-1. fork this repo "corp-platform-github" and push the code to your own organization.
+# corp-platform-github
 
-2. Boostrap
+GitHub-as-Code for managing GitHub organization governance with Terraform and GitHub Actions.
 
-Need to generate a subscription that is specially for this protect, as terraform need to store tfstate in the azure cloud.
+This project helps teams define and enforce platform standards across GitHub using version-controlled configuration rather than manual console clicks. It can manage:
 
-replace the "org_name/repo_name" with your own organization and repo name.
+- GitHub organization members and roles
+- Teams and team membership
+- Repositories and repository features
+- Branch protection rules
+- Deployment environments
+- GitHub Actions integration with Azure OIDC
 
-execute the boostrap.ps1 script, then it will output the AZURE_CLIENT_ID, AZURE_TENANT_ID and AZURE_SUBSCRIPTION_ID.
+It is designed for organizations that want a consistent, repeatable, and auditable GitHub governance model.
 
-==========================================
-  Azure OIDC Credentials for GitHub Secrets
-==========================================
-AZURE_CLIENT_ID:       54fa05e6-238b-4c9d-a4be-39ec1a7a06dc
-AZURE_TENANT_ID:       da528e4a-a122-4392-b5c8-370e74e0236d
-AZURE_SUBSCRIPTION_ID: c5c80e22-450e-430a-b952-42a8b9307812
-==========================================
+## What this repository contains
 
-Note: you need to generate your subscription manually if you are using personal subscription. take a look at the ./scripts/generatesubscription.ps1
+- `githubascode/` — Terraform modules and configuration for GitHub-as-Code resources
+- `scripts/` — Azure and GitHub bootstrap scripts
+- `.github/workflows/` — GitHub Actions pipelines for validation, backend storage creation, and deployment
+- `docs/` — supporting diagrams and screenshots
+- `bootstrap.ps1` — Azure bootstrap script for OIDC and subscription setup
 
-Then you can run the create-terraform-storage-account-prod.yml to generate storage Account in the subscription
+## Architecture overview
 
-Then store AZURE_CLIENT_ID, AZURE_TENANT_ID, and AZURE_SUBSCRIPTION_ID to your repositories secrets
+The repository uses Terraform to define GitHub resources declaratively through CSV-driven configuration. In practice, the flow looks like this:
 
-![repository credential](./docs/repository-credentials.png)
+1. Configure organization-level settings in the `githubascode/config/` folder.
+2. Run Terraform to validate and apply the desired GitHub state.
+3. Use GitHub Actions to run validation and deployment workflows.
+4. Secure Azure access using OIDC instead of long-lived secrets.
+5. Store Terraform state in Azure Storage to keep infrastructure management stateful and consistent.
 
-4. Execute Github Action protect-terraform-github-repo.yml, fill the paramters then will generate the storage Account for you.
+## Prerequisites
 
-5. Create a github app
-create a github app, and install it in your organization.
+Before using this repository, make sure you have:
 
-store github app credentials in your organization level: CORP_PLATFORM_GITHUB_APP_ID, CORP_PLATFORM_GITHUB_APP_SECRET
-![organization credential](./docs/organization-credentials.png)
+- A GitHub organization
+- An Azure subscription
+- Azure CLI installed and authenticated
+- PowerShell 7+
+- A fork of this repository inside your own GitHub organization
+- Permission to create GitHub App credentials and organization-level secrets
 
-6. checkout a new branch from main branch, make some change, then create PR to main branch.
+## Quick start
+
+### 1. Fork and customize the repo
+
+Fork `corp-platform-github` into your organization and push it to your own GitHub org.
+
+Update the repository reference used by the bootstrap script to match your own organization/repository.
+
+### 2. Bootstrap Azure and GitHub OIDC
+
+From PowerShell, run:
+
+```powershell
+./bootstrap.ps1
+```
+
+This script configures the Azure context and sets up OIDC connectivity for GitHub Actions. It is intended to generate the values needed for repository secrets.
+
+After the script runs, store the following values as GitHub repository secrets:
+
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+
+If you are using a personal Azure subscription, you may need to create or assign a subscription explicitly before continuing. See `scripts/generatesubscription.ps1`.
+
+### 3. Create the Terraform state backend
+
+Use the workflow in:
+
+- `.github/workflows/create-terraform-storage-account.yml`
+
+This workflow creates the Azure storage account and container used by Terraform for remote state storage.
+
+### 4. Configure repository and organization secrets
+
+Add the following repository secrets:
+
+- `AZURE_CLIENT_ID`
+- `AZURE_TENANT_ID`
+- `AZURE_SUBSCRIPTION_ID`
+
+Create a GitHub App in your organization and install it in the org. Store the app credentials as organization-level secrets:
+
+- `CORP_PLATFORM_GITHUB_APP_ID`
+- `CORP_PLATFORM_GITHUB_APP_SECRET`
+
+### 5. Run the GitHub workflows
+
+The repository includes validation and deployment workflows:
+
+- `gac-terraform-unit-tests.yml` — Terraform validation and unit-style checks
+- `gac-terraform-test-plan-apply-prod.yml` — test, plan, and apply flow for production
+
+### 6. Create a branch and submit a PR
+
+Create a feature branch from `main`, make your changes, and open a pull request against the default branch.
+
+## Repository structure
+
+```text
+.
+├── .github/
+│   └── workflows/
+├── docs/
+├── githubascode/
+│   ├── config/
+│   ├── modules/
+│   ├── main.tf
+│   ├── locals.tf
+│   ├── variables.tf
+│   ├── outputs.tf
+│   └── README.md
+├── scripts/
+├── .gitignore
+├── bootstrap.ps1
+├── README.md
+└── LICENSE
+```
+
+## Example lifecycle
+
+A common workflow is:
+
+1. Fork this repository into your organization.
+2. Configure Azure OIDC and repository secrets.
+3. Create the Terraform state storage backend.
+4. Update CSV files in `githubascode/config/` to reflect your GitHub organization.
+5. Validate and apply the configuration via GitHub Actions or Terraform commands.
+6. Review and merge pull requests using your normal GitHub governance flow.
+
+## Security notes
+
+- Prefer OIDC over long-lived cloud credentials.
+- Store sensitive values in GitHub Secrets instead of committing them to source control.
+- Keep the GitHub App credentials at the organization level for shared access.
+- Review branch protection and access policies before production rollout.
+
+## License
+
+This project is licensed under the MIT License. See the `LICENSE` file for details.
+
+## Contributing
+
+Contributions are welcome. Please open an issue or pull request with a clear description of the change and the problem it solves.
