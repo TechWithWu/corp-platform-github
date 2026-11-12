@@ -1,0 +1,2 @@
+name,description,visibility,auto_init,has_issues,has_wiki,has_projects
+learn-tf-infrastructure,Learn Terraform - Infrastructure repository managed as code,public,true,true,false,false

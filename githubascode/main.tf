@@ -1,59 +1,43 @@
-# ---------------------------------------------------------------------------------------------------------------------
-# GITHUB-AS-CODE: SCALABLE ENTERPRISE PLATFORM & APPLICATION REPOSITORIES ORCHESTRATION
-# ---------------------------------------------------------------------------------------------------------------------
-# 1. Loads repository definitions from the decoupled /githubascode/repositories.json catalog
-# 2. Blocks direct commits to both 'main' and 'develop' (enforces Pull Requests & Code Owners)
-# 3. Requires designated per-repository reviewer approvals for the 'prod' deployment environment
-# 4. Provisions 4 isolated environments: 'dev', 'qa', 'cae', and 'prod', each with dedicated Azure OIDC credentials
-# 5. Pipeline status checks are decoupled to allow each repository to define its own CI/CD workflow
-# ---------------------------------------------------------------------------------------------------------------------
-
-locals {
-  # Collect all unique usernames of designated approvers across all repositories in the catalog
-  all_prod_approver_usernames = distinct(flatten([
-    for repo in local.active_repositories : [
-      for approver in try(repo.prod_approvers, []) : approver.username if try(approver.username, "") != ""
-    ]
-  ]))
+# 1. Organization Members Module
+# Manages organization-level memberships and roles from config/members.csv
+module "members" {
+  source  = "./modules/members"
+  members = local.members_data
 }
 
-# Dynamically look up GitHub numeric user IDs for each unique approver
-data "github_user" "approvers" {
-  for_each = toset(local.all_prod_approver_usernames)
-  username = each.value
+# 2. Teams & Team Memberships Module
+# Manages team creation and member assignments from config/teams.csv and config/team-members/*.csv
+module "teams" {
+  source = "./modules/teams"
+  teams  = local.teams_data
+
+  depends_on = [module.members]
 }
 
-locals {
-  # Map username to resolved GitHub numeric user ID
-  approver_username_to_id = {
-    for username, user in data.github_user.approvers : username => user.id
-  }
-}
-
+# 3. Repositories & Team Access Module
+# Manages repository provisioning and team access from config/repositories.csv and config/repos-team/*.csv
 module "repositories" {
-  source   = "./modules/repository"
-  for_each = local.active_repositories
+  source       = "./modules/repositories"
+  repositories = local.repositories_data
+  team_ids     = module.teams.team_ids
 
-  name        = each.key
-  description = each.value.description
-  visibility  = coalesce(each.value.visibility, "private")
-  topics      = coalesce(each.value.topics, ["terraform"])
+  depends_on = [module.teams]
+}
 
-  # 1. Multi-Branch Protection: Direct commits to 'main' & 'dev' are strictly BLOCKED
-  # (Status checks omitted so each repository can freely execute its own custom pipeline)
-  default_branch             = "main"
-  protected_branches         = coalesce(each.value.protected_branches, ["main", "dev"])
-  enforce_admins             = true
-  required_approvals         = coalesce(each.value.required_approvals, 2)
-  dismiss_stale_reviews      = true
-  require_code_owner_reviews = true
+# 4. Branch Protection Module
+# Enforces branch protection rules based on each repository name from config/branch_protection.csv
+module "branch_protection" {
+  source             = "./modules/branch_protection"
+  branch_protections = local.branch_protection_data
 
-  # 2. Multi-Environment & Dedicated Azure OIDC Credentials ('dev', 'qa', 'cae', 'prod')
-  environments = each.value.environments
+  depends_on = [module.repositories]
+}
 
-  # 3. Per-Repository Designated Approvers for 'prod' environment
-  prod_reviewer_ids = flatten([
-    for approver in try(each.value.prod_approvers, []) :
-    contains(keys(local.approver_username_to_id), try(approver.username, "")) ? [local.approver_username_to_id[approver.username]] : []
-  ])
+# 5. Environments Setup Module
+# Provisions deployment environments based on each repository name from config/environments.csv
+module "environments" {
+  source       = "./modules/environments"
+  environments = local.environments_data
+
+  depends_on = [module.repositories]
 }

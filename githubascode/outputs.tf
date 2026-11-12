@@ -1,39 +1,33 @@
-output "total_repositories_count" {
-  description = "Total number of repositories provisioned from the catalog."
-  value       = length(module.repositories)
+# ---------------------------------------------------------------------------------------------------------------------
+# ROOT OUTPUTS
+# ---------------------------------------------------------------------------------------------------------------------
+
+output "members" {
+  description = "List of organization member usernames"
+  value       = module.members.usernames
+}
+
+output "teams" {
+  description = "Map of provisioned teams with their numeric IDs"
+  value       = module.teams.team_ids
+}
+
+output "repositories" {
+  description = "List of repositories created and managed"
+  value       = module.repositories.repository_names
 }
 
 output "repository_urls" {
-  description = "Map of created repository names to their GitHub HTML URLs."
-  value = {
-    for name, repo in module.repositories : name => repo.html_url
-  }
+  description = "Map of repository names to their GitHub HTML URLs"
+  value       = module.repositories.repository_urls
 }
 
-output "provisioned_environments" {
-  description = "Map of repository names to their provisioned deployment environments ('dev', 'qa', 'cae', 'prod')."
-  value = {
-    for name, repo in module.repositories : name => repo.environments
-  }
+output "branch_protections" {
+  description = "List of repositories with active branch protection rules"
+  value       = module.branch_protection.protected_repositories
 }
 
-output "protected_branches" {
-  description = "Map of repository names to their protected branch patterns ('main', 'dev')."
-  value = {
-    for name, repo in module.repositories : name => repo.protected_branches
-  }
-}
-
-output "prod_approval_gates" {
-  description = "Designated reviewer gate enforced on 'prod' deployment environments per repository from repositories.json."
-  value = {
-    for name, repo in local.active_repositories : name => [
-      for approver in try(repo.prod_approvers, []) : "${approver.username} (${approver.email})"
-    ]
-  }
-}
-
-output "pipeline_status_checks_policy" {
-  description = "Architecture policy on branch protection status checks."
-  value       = "Status checks are decoupled from branch protection so each repository can execute its own distinct CI/CD pipeline without Terraform coupling."
+output "environments" {
+  description = "List of repository environment keys provisioned from config/environments.csv"
+  value       = module.environments.environment_keys
 }

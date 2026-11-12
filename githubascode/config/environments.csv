@@ -1,0 +1,3 @@
+repository,environment,can_admins_bypass,prevent_self_review,wait_timer
+learn-tf-infrastructure,dev,true,false,0
+learn-tf-infrastructure,prod,false,true,0

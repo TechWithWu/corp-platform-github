@@ -1,0 +1,3 @@
+repository,team_name,permission
+learn-tf-infrastructure,Security Team,maintain
+learn-tf-infrastructure,Developer Team,pull
