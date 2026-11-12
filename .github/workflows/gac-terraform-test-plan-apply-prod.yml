@@ -86,7 +86,7 @@ jobs:
           ARM_USE_OIDC: true
           TF_IN_AUTOMATION: 'true'
         run: |
-          terraform plan -backend-config="env/${{ env.TF_ENV }}/backend.hcl" -var-file="env/${{ env.TF_ENV }}/terraform.tfvars" -no-color -out=tfplan > plan.out
+          terraform plan -var-file="env/${{ env.TF_ENV }}/terraform.tfvars" -no-color -out=tfplan > plan.out
           cat plan.out
 
       - name: 'Format Plan Summary'
@@ -201,7 +201,7 @@ jobs:
           TF_IN_AUTOMATION: 'true'
         run: |
           echo "Approver review completed. Applying pre-computed plan..."
-          terraform apply -auto-approve -backend-config="env/${{ env.TF_ENV }}/backend.hcl" -var-file="env/${{ env.TF_ENV }}/terraform.tfvars"  tfplan
+          terraform apply -auto-approve tfplan
 
       - name: 'Publish Apply Report to Summary'
         if: always()
