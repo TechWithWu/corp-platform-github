@@ -6,6 +6,8 @@ variable "environments" {
     can_admins_bypass   = optional(bool, false)
     prevent_self_review = optional(bool, true)
     wait_timer          = optional(number, 0)
+    reviewer_users      = list(string)
+    reviewer_teams      = list(string) 
   }))
   default = {}
 }
