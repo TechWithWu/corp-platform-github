@@ -28,7 +28,7 @@ locals {
       for row in local.team_members_raw : row.username => {
         role = coalesce(try(row.role, "member"), "member")
       } if trimspace(coalesce(try(row.team, ""), try(row.team_name, ""))) == t.name
-        && trimspace(try(row.username, "")) != ""
+      && trimspace(try(row.username, "")) != ""
     }
   }
 
@@ -55,7 +55,7 @@ locals {
       for row in local.repo_teams_raw : row.team_name => {
         permission = row.permission
       } if trimspace(coalesce(try(row.repository, ""), try(row.repository_name, ""))) == r.name
-        && trimspace(try(row.team_name, "")) != ""
+      && trimspace(try(row.team_name, "")) != ""
     }
   }
 

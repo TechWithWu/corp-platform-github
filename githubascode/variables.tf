@@ -12,6 +12,6 @@ variable "default_branch" {
 }
 
 variable "github_owner" {
-  type = string
+  type        = string
   description = "GitHub organization or user name"
 }

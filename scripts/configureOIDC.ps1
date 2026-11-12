@@ -66,9 +66,14 @@ if (-not $orgId -or -not $repoId) {
 
 $federatedCredentials = @(
     @{
-        Name    = "github-actions-prod-env"
-        Subject = "repo:${orgName}@${orgId}/${repoName}@${repoId}:environment:prod"
-        Desc    = "GitHub Actions OIDC for Production Environment"
+        Name    = "github-actions-branch-main"
+        Subject = "repo:${orgName}@${orgId}/${repoName}@${repoId}:ref:refs/heads/main"
+        Desc    = "GitHub Actions OIDC for Main Branch"
+    },
+    @{
+        Name    = "github-actions-branch-develop"
+        Subject = "repo:${orgName}@${orgId}/${repoName}@${repoId}:ref:refs/heads/develop"
+        Desc    = "GitHub Actions OIDC for Development Branch"
     },
     @{
         Name    = "github-actions-pr"
