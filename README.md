@@ -94,7 +94,16 @@ You can adjust the parameters based on the file `githubascode/env/dev/backend.hc
 
 ### 4. Create a Github APP and Configure organization secrets
 
-Create a GitHub App in your organization and install it in the org. 
+Create a GitHub App in your organization and assign following permissions:
+```
+Permissions:
+ Read access to metadata
+
+ Read and write access to actions, actions variables, administration, code, environments, issues, members, pull requests, repository creation, and secrets
+```
+
+
+Install it in the org. 
 ![github app](./docs/github-app.png)
 
 Store the app credentials as organization-level secrets:
