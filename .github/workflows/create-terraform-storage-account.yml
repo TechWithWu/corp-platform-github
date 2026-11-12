@@ -1,4 +1,4 @@
-name: 'Create Terraform State Storage'
+name: 'Create Terraform State Storage Account'
 
 on:
   workflow_dispatch:
@@ -11,17 +11,17 @@ on:
       state_rg_name:
         description: 'Resource Group Name for State'
         required: false
-        default: 'rg-terraform-state-prod'
+        default: 'rg-tfstate-prod'
         type: string
       state_sa_name:
         description: 'Storage Account Name for State'
         required: false
-        default: 'stcorpghasstateprod'
+        default: 'stcorpplatformgithubprod'
         type: string
       state_container_name:
         description: 'Blob Container Name for State'
         required: false
-        default: 'tfstate'
+        default: 'corpplatformgithubprod'
         type: string
       state_location:
         description: 'Azure Region Location'
