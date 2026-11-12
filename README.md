@@ -46,9 +46,19 @@ Before using this repository, make sure you have:
 
 ### 1. Fork and customize the repo
 
-Fork `corp-platform-github` into your organization and push it to your own GitHub org.
+Fork `corp-platform-github` into your organization and push it to your own GitHub org(eg: `corp-techwithwu`).
 
-Update the repository reference used by the bootstrap script to match your own organization/repository.
+> [!IMPORTANT]
+>
+> Set the organization's Base permissions to No permissions.
+>
+> This flips your org into default-deny (allowlist) mode: newly invited members can see nothing​ until a repository or team grant explicitly gives them access.
+>
+> `Settings → Organization → Member privileges → Base permissions → No permissions`
+
+![change base permission to no permissions](./docs/base-permissions-to-no-permission.png)
+
+Update the repository reference used by the `bootstrap.ps1` script to match your own organization/repository.
 
 ### 2. Bootstrap Azure and GitHub OIDC
 
@@ -68,6 +78,8 @@ After the script runs, store the following values as GitHub repository secrets:
 
 If you are using a personal Azure subscription, you may need to create or assign a subscription explicitly before continuing. See `scripts/generatesubscription.ps1`.
 
+![repository secrets](./docs/repository-credentials.png)
+
 ### 3. Create the Terraform state backend
 
 Use the workflow in:
@@ -76,18 +88,21 @@ Use the workflow in:
 
 This workflow creates the Azure storage account and container used by Terraform for remote state storage.
 
-### 4. Configure repository and organization secrets
+You can adjust the parameters based on the file `githubascode/env/dev/backend.hcl` and `githubascode/env/dev/backend.hcl` 
 
-Add the following repository secrets:
+![create storage account](./docs/create-sa.png)
 
-- `AZURE_CLIENT_ID`
-- `AZURE_TENANT_ID`
-- `AZURE_SUBSCRIPTION_ID`
+### 4. Create a Github APP and Configure organization secrets
 
-Create a GitHub App in your organization and install it in the org. Store the app credentials as organization-level secrets:
+Create a GitHub App in your organization and install it in the org. 
+![github app](./docs/github-app.png)
+
+Store the app credentials as organization-level secrets:
 
 - `CORP_PLATFORM_GITHUB_APP_ID`
 - `CORP_PLATFORM_GITHUB_APP_SECRET`
+
+![organization secrets](./docs/organization-credentials.png)
 
 ### 5. Run the GitHub workflows
 
