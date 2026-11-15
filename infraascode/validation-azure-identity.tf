@@ -38,7 +38,7 @@ locals {
   # 3. Validate environment in federated_credentials.csv
   referenced_fc_environments = distinct([
     for row in local.federated_credentials_raw : lower(trimspace(row.environment))
-    if trimspace(try(row.environment, "")) != ""
+    if trimspace(try(row.environment, "")) != "" && lower(trimspace(try(row.environment, ""))) == "environment"
   ])
 
   invalid_fc_environments = sort([
