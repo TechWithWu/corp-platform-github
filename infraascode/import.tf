@@ -13,7 +13,7 @@ import {
 #     service principal name = { app = "applications/application id", sp = "servicePrincipals/object id" }
 locals {
   _imp = {
-    "sp-corp-platform-management-prod" = { app = "applications/f7d97ef1-807c-4855-908a-ead05fbb18a0", sp = "servicePrincipals/d6f8223b-521f-425d-8852-5524e335c2dd" }
+    "sp-corp-platform-management-prod" = { app = "applications/f7d97ef1-807c-4855-908a-ead05fbb18a0", sp = "servicePrincipals/c56ce271-c1f9-479d-88e0-3d42ff2b56c9" }
   }
 }
 import {
