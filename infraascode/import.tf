@@ -4,10 +4,10 @@ import {
   id = "corp-platform-github"
 }
 
-import {
-  to = module.members.github_membership.this["techwithwu"]
-  id = "corp-techwithwu:techwithwu"
-}
+# import {
+#   to = module.members.github_membership.this["techwithwu"]
+#   id = "corp-techwithwu:techwithwu"
+# }
 
 # Service Principals Import
 #     service principal name = { app = "applications/application id", sp = "servicePrincipals/object id" }
