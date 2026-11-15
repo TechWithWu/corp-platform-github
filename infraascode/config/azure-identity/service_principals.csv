@@ -1,5 +1,3 @@
 name,owner_team,purpose
-sp-github-actions-bootstrap,platform-team,delegates roles only
-sp-proj001-platform,platform-team,provisions proj001 infrastructure
-sp-proj001-platformdev,platform-team,provisions proj001 dev infrastructure
-sp-proj001-webapi,proj001-team,deploys webapi code to App Service only
+sp-corp-platform-management-prod,corp-platform-github,delegates roles only
+sp-corp-platform-foundation-prod,corp-platform-foundation,delegates roles only

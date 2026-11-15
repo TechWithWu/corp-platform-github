@@ -31,17 +31,17 @@ jobs:
     # Validate code format
     - name: Terraform Format Check
       run: terraform fmt -check
-      working-directory: githubascode
+      working-directory: infraascode
 
     # Initialize Terraform (only perform format and syntax static checks when backend=false)
     - name: Terraform Init
       run: terraform init -backend=false
-      working-directory: githubascode
+      working-directory: infraascode
 
     # Validate Terraform code logic and structure
     - name: Terraform Validate
       run: terraform validate
-      working-directory: githubascode
+      working-directory: infraascode
 
     # Use Checkov to scan Terraform code for security issues
     - name: Run Checkov action
@@ -49,7 +49,7 @@ jobs:
       uses: bridgecrewio/checkov-action@master
       with: 
         framework: terraform
-        directory: githubascode # scan the githubascode directory
+        directory: infraascode # scan the infraascode directory
 
     # Upload SARIF report to GitHub Advanced Security
     - name: Upload SARIF file

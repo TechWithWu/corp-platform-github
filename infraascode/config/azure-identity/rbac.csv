@@ -1,6 +1,6 @@
 sp_name,scope_type,scope_ref,role_definition_name,condition_mode,principal_type,description
-sp-github-actions-bootstrap,management_group,/providers/Microsoft.Management/managementGroups/corp-platform-root-group,Role Based Access Control Administrator,exclude_privileged,ServicePrincipal,bootstrap delegates non-privileged roles
-sp-proj001-platform,subscription,/subscriptions/c5c80e22-450e-430a-b952-42a8b9307812,Contributor,,ServicePrincipal,builds RG/VNet/ASP/WebApp/AKS
-sp-proj001-platform,resource_group,/subscriptions/c5c80e22-450e-430a-b952-42a8b9307812,Storage Blob Data Contributor,,ServicePrincipal,reads writes platform tfstate
-sp-proj001-webapi,resource_group,/subscriptions/c5c80e22-450e-430a-b952-42a8b9307812,Website Contributor,,ServicePrincipal,push code + restart + swap slot
-sp-proj001-webapi,resource_group,/subscriptions/c5c80e22-450e-430a-b952-42a8b9307812,Storage Blob Data Contributor,,ServicePrincipal,reads writes app tfstate (if app owns resources via TF)
+sp-corp-platform-management-prod,management_group,/providers/Microsoft.Management/managementGroups/corp-platform-root-group,Role Based Access Control Administrator,exclude_privileged,ServicePrincipal,bootstrap delegates non-privileged roles
+sp-corp-platform-management-prod,subscription,/subscriptions/6b80b8d5-aef4-4952-8558-1f1b168f47a6,Contributor,,ServicePrincipal,builds github as code and role assignment
+sp-corp-platform-management-prod,subscription,/subscriptions/6b80b8d5-aef4-4952-8558-1f1b168f47a6,Storage Blob Data Contributor,,ServicePrincipal,builds terraform storage account backend
+sp-corp-platform-foundation-prod,subscription,/subscriptions/6b80b8d5-aef4-4952-8558-1f1b168f47a6,Contributor,,ServicePrincipal,builds terraform storage account backend
+sp-corp-platform-foundation-prod,subscription,/subscriptions/6b80b8d5-aef4-4952-8558-1f1b168f47a6,Storage Blob Data Contributor,,ServicePrincipal,builds terraform storage account backend

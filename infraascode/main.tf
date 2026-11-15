@@ -45,8 +45,8 @@ module "environments" {
 # 6. Azure Service Principals Module
 # Provisions Azure AD Applications and Service Principals from config/azure-identity/service_principals.csv
 module "azure_service_principals" {
-  source                = "./modules/azure_service_principals"
-  service_principals    = local.service_principals_data
+  source             = "./modules/azure_service_principals"
+  service_principals = local.service_principals_data
 }
 
 # 7. Azure RBAC Module

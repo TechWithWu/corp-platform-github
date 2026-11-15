@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: githubascode
+        working-directory: infraascode
 
     steps:
       - name: 'Checkout Repository'
@@ -40,7 +40,7 @@ jobs:
         id: generate-token
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ vars.CORP_PLATFORM_GITHUB_APP_ID }}
+          app-id: ${{ secrets.CORP_PLATFORM_GITHUB_APP_ID }}
           private-key: ${{ secrets.CORP_PLATFORM_GITHUB_APP_SECRET }}
           owner: ${{ github.repository_owner }}
 
@@ -134,7 +134,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gac-tfplan
-          path: githubascode/tfplan
+          path: infraascode/tfplan
           retention-days: 7
           if-no-files-found: error
 
@@ -147,7 +147,7 @@ jobs:
     environment: prod
     defaults:
       run:
-        working-directory: githubascode
+        working-directory: infraascode
 
     steps:
       - name: 'Checkout Repository'
@@ -178,7 +178,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: gac-tfplan
-          path: githubascode
+          path: infraascode
 
       - name: 'Terraform Init (Azure Storage State Backend)'
         env:
