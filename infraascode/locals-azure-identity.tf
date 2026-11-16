@@ -16,7 +16,7 @@ locals {
   # 2. Parse RBAC Role Assignments (config/azure-identity/rbac.csv)
   rbac_raw = csvdecode(file("${local.config_path}/azure-identity/rbac.csv"))
   rbac_assignments_data = {
-    for idx, r in local.rbac_raw : "${trimspace(r.sp_name)}:${trimspace(r.role_definition_name)}:${substr(sha256(trimspace(r.scope_ref)), 0, 8)}" => {
+    for idx, r in local.rbac_raw : "${trimspace(r.sp_name)}:${trimspace(r.role_definition_name)}" => {
       sp_name              = trimspace(r.sp_name)
       scope_type           = trimspace(try(r.scope_type, ""))
       scope_ref            = trimspace(r.scope_ref)

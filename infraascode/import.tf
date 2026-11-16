@@ -30,7 +30,3 @@ import {
   id       = each.value.sp
   to       = module.azure_service_principals.azuread_service_principal.this[each.key]
 }
-
-# Service Principals: Role Assignment Access Control Import
-
-# Service Princiapls: Federated Credentials Import
