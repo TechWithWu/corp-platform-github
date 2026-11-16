@@ -27,6 +27,28 @@ locals {
     } if trimspace(try(r.sp_name, "")) != "" && trimspace(try(r.role_definition_name, "")) != ""
   }
 
+  # Owner、User Access Administrator (UAA)、Role Based Access Control Administrator
+  privileged_role_ids = [
+    "8e3af657-a8ff-443c-a75c-2fe8c4bcb635", # Owner
+    "18d7d88d-d35e-4fb5-a5c3-7773c20a72d9", # User Access Administrator (UAA)
+    "f58310d9-a9f6-4a2f-ba1f-1f3b5a0d9e0c"  # Role Based Access Control Administrator
+  ]
+
+  # ABAC Privileged Role Exclusion Condition
+  exclude_privileged_condition = <<-EOT
+    (
+      ( !(ActionMatches{'Microsoft.Authorization/roleAssignments/write'}) )
+      OR
+      ( @Request[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAllValues:GuidNotEquals {${join(",", local.privileged_role_ids)}} )
+    )
+    AND
+    (
+      ( !(ActionMatches{'Microsoft.Authorization/roleAssignments/delete'}) )
+      OR
+      ( @Resource[Microsoft.Authorization/roleAssignments:RoleDefinitionId] ForAnyOfAllValues:GuidNotEquals {${join(",", local.privileged_role_ids)}} )
+    )
+  EOT
+
   # 3. Parse Federated Credentials (config/azure-identity/federated_credentials.csv)
   federated_credentials_raw = csvdecode(file("${local.config_path}/azure-identity/federated_credentials.csv"))
   federated_credentials_data = {

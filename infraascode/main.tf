@@ -55,6 +55,7 @@ module "azure_rbac" {
   source                       = "./modules/azure_rbac"
   rbac_assignments             = local.rbac_assignments_data
   service_principal_object_ids = module.azure_service_principals.service_principal_object_ids
+  exclude_privileged_condition = local.exclude_privileged_condition
 
   depends_on = [module.azure_service_principals]
 }
@@ -68,6 +69,7 @@ module "azure_federated_credentials" {
   application_object_ids = module.azure_service_principals.application_object_ids
   github_owner           = var.github_owner
   repository_ids         = module.repositories.repository_ids
+  organization_id        = data.github_organization.this.id
 
   depends_on = [module.repositories, module.azure_service_principals]
 }

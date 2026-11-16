@@ -17,3 +17,9 @@ variable "service_principal_object_ids" {
   type        = map(string)
   default     = {}
 }
+
+variable "exclude_privileged_condition" {
+  description = "ABAC condition to exclude privileged roles from assignments"
+  type        = string
+  default     = ""
+}

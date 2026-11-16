@@ -73,8 +73,15 @@ Go your Azure Portal, and create a service principal(eg: `sp-corp-platform-manag
 Once your service principal has been created, add github federated credentials. you can view your organization id and repo by github api(eg: `https://api.github.com/repos/corp-techwithwu/corp-platform-github`)  
 ![create federated credentials for github](./docs/bootstrap-federated-credential.png)
 
+Add API Permissions(`Directory.ReadWrite.All` and `Application.ReadWrite.All`) to the service principal.
+![api permissions](./docs/api-permissions.png)
+
 Add `contributor` and `Storage Blob Data Contributor` role to subscription `corp-platform-management-prod`
 ![add IMA](./docs/corp-platform-management-ima.png)
+
+Add `Role Based Access Control Administrator` role to management group `Corp Platform Root Group`
+![add Role Based Access Control Administrator to Corp Platform Root Group](./docs/add-rbac-to-management-group.png)
+
 
 And then retrieve the following values:
 - `AZURE_CLIENT_ID`
@@ -126,8 +133,12 @@ the storage account created in [create-terraform-storage-account.yml](.github/wo
 It may took some time if it's the first time you run, as the fresh subscription usually doesn't have 'Microsoft.Storage' registered. the script will trigger the registering, but it may take several minutes. for more details look at [create-terraform-storage.sh](.github/scripts/create-terraform-storage.sh)
 ![storage registered](./docs/storage-registered.png)
 
+### 5. Import existing resources
+Rename `import.tf.example` to `import.tf`, and modify the data based on your needs.
 
-### 5. Create a branch and submit a PR
+> Once you imported your resources, you should rename your data to import.tf.example again. you shouldn't import it every time.
+
+### 6. Create a branch and submit a PR
 
 Create a feature branch from `main`, make your changes, and open a pull request against the default branch.
 
