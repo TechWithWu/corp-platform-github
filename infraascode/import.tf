@@ -49,6 +49,11 @@ import {
 }
 
 import {
+  to = module.azure_federated_credentials.azuread_application_federated_identity_credential.this["sp-corp-platform-management-prod:corp-platform-github:main"]
+  id = "e12f41c6-34bc-462b-8fb2-a6af8ff141ef/federatedIdentityCredential/55923340-d3c5-48b8-9b80-886c50eadc89"
+}
+
+import {
   to = module.azure_federated_credentials.azuread_application_federated_identity_credential.this["sp-corp-platform-management-prod:corp-platform-github:dev"]
   id = "e12f41c6-34bc-462b-8fb2-a6af8ff141ef/federatedIdentityCredential/5d6a7b96-3b77-4801-aee6-3a4176bc4a7e" # corp-platform-github-environment-dev
 }
