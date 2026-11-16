@@ -41,3 +41,9 @@ import {
   to = module.azure_rbac.azurerm_role_assignment.this["sp-corp-platform-management-prod:Storage Blob Data Contributor"]
   id = "/subscriptions/6b80b8d5-aef4-4952-8558-1f1b168f47a6/providers/Microsoft.Authorization/roleAssignments/7c11ed54-f5e2-50c9-b183-49017eee2d84"
 }
+
+# Import: Azure Federated Credentials
+import {
+  to = module.azure_federated_credentials.azuread_application_federated_identity_credential.this["sp-corp-platform-management-prod:corp-platform-github:developer"]
+  id = "e12f41c6-34bc-462b-8fb2-a6af8ff141ef/federatedIdentityCredential/de60f300-5ba9-4c7a-becc-1c82b7e4e357"
+}
