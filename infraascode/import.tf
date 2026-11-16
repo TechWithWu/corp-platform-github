@@ -50,15 +50,15 @@ import {
 
 import {
   to = module.azure_federated_credentials.azuread_application_federated_identity_credential.this["sp-corp-platform-management-prod:corp-platform-github:dev"]
-  id = "e12f41c6-34bc-462b-8fb2-a6af8ff141ef/federatedIdentityCredential/5d6a7b96-3b77-4801-aee6-3a4176bc4a7e"   # corp-platform-github-environment-dev
+  id = "e12f41c6-34bc-462b-8fb2-a6af8ff141ef/federatedIdentityCredential/5d6a7b96-3b77-4801-aee6-3a4176bc4a7e" # corp-platform-github-environment-dev
 }
 
 import {
   to = module.azure_federated_credentials.azuread_application_federated_identity_credential.this["sp-corp-platform-management-prod:corp-platform-github:prod"]
-  id = "e12f41c6-34bc-462b-8fb2-a6af8ff141ef/federatedIdentityCredential/d25ae5c0-1383-4f03-ad20-bd83368d8b7b"   # corp-platform-github-environment-prod
+  id = "e12f41c6-34bc-462b-8fb2-a6af8ff141ef/federatedIdentityCredential/d25ae5c0-1383-4f03-ad20-bd83368d8b7b" # corp-platform-github-environment-prod
 }
 
 import {
   to = module.azure_federated_credentials.azuread_application_federated_identity_credential.this["sp-corp-platform-management-prod:corp-platform-github:"]
-  id = "e12f41c6-34bc-462b-8fb2-a6af8ff141ef/federatedIdentityCredential/7a745ccd-1dc5-4faf-936d-560a4084dcd9"   # corp-platform-github-pull-request-
+  id = "e12f41c6-34bc-462b-8fb2-a6af8ff141ef/federatedIdentityCredential/7a745ccd-1dc5-4faf-936d-560a4084dcd9" # corp-platform-github-pull-request-
 }
