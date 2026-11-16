@@ -18,11 +18,13 @@ locals {
     "sp-corp-platform-management-prod" = { app = "applications/d6f8223b-521f-425d-8852-5524e335c2dd", sp = "servicePrincipals/c56ce271-c1f9-479d-88e0-3d42ff2b56c9" }
   }
 }
+
 import {
   for_each = local._imp
   id       = each.value.app
   to       = module.azure_service_principals.azuread_application.this[each.key]
 }
+
 import {
   for_each = local._imp
   id       = each.value.sp

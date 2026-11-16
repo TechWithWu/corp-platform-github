@@ -9,7 +9,7 @@ locals {
   resolved_variables = {
     for k, v in var.environments_variables : k => merge(v, {
       resolved_value = (
-        v.type == "azure_credential" ? (
+        can(regex("azure_credential", v.type)) ? (
           v.key == "AZURE_TENANT_ID" ? var.azure_credentials.tenant_id : (
             v.key == "AZURE_SUBSCRIPTION_ID" ? var.azure_credentials.subscription_id : (
               v.key == "AZURE_CLIENT_ID" ? (
