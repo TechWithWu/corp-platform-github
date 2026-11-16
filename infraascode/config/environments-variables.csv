@@ -1,1 +1,4 @@
 repo,env_or_repo,key,value,type,sp_name
+corp-platform-github,repo,AZURE_TENANT_ID,,azure_credential,sp-corp-platform-management-prod
+corp-platform-github,repo,AZURE_CLIENT_ID,,azure_credential,sp-corp-platform-management-prod
+corp-platform-github,repo,AZURE_SUBSCRIPTION_ID,6b80b8d5-aef4-4952-8558-1f1b168f47a6,secret,sp-corp-platform-management-prod
