@@ -15,7 +15,7 @@ resource "azurerm_role_assignment" "this" {
   principal_type       = each.value.principal_type != "" ? each.value.principal_type : "ServicePrincipal"
   description          = each.value.description != "" ? each.value.description : null
 
-  # dynamic ABAC: only inject when condition_mode == "exclude_privileged"
+  # # dynamic ABAC: only inject when condition_mode == "exclude_privileged"
   # condition_version = "2.0"
   # condition         = var.exclude_privileged_condition
 
