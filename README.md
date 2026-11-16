@@ -136,11 +136,21 @@ It may took some time if it's the first time you run, as the fresh subscription 
 ### 5. Import existing resources
 Rename `import.tf.example` to `import.tf`, and modify the data based on your needs.
 
+You can see I imported some resources I created in the previous steps that should be managed by this repo.
+
 > Once you imported your resources, you should rename your data to import.tf.example again. you shouldn't import it every time.
 
-### 6. Create a branch and submit a PR
+### 5. Run gac-terraform-test-plan-apply-prod.yml in the main branch
 
-Create a feature branch from `main`, make your changes, and open a pull request against the default branch.
+As this is the startup, so run [gac-terraform-test-plan-apply-prod.yml](.github/workflows/gac-terraform-test-plan-apply-prod.yml) script will make this repo manage current repo resources(that has been added in the import.tf file). 
+- Import existed resources(sp, RBAC, and Federated Credentials)
+- Set up configured rules(such as: environment, branch protections, etc... [infraascode/config](infraascode/config)) 
+
+### 6. Create a develop branch and submit a PR
+
+Create a develop branch from `main`, make your changes, and open a pull request against the default branch.
+
+add new repo inside the [infraascode/config](infraascode/config), then submit a PR.
 
 then the following two workflows will be triggered:
 
