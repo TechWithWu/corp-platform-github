@@ -11,11 +11,9 @@ locals {
       resolved_value = (
         can(regex("azure_credential", v.type)) ? (
           v.key == "AZURE_TENANT_ID" ? var.azure_credentials.tenant_id : (
-            v.key == "AZURE_SUBSCRIPTION_ID" ? var.azure_credentials.subscription_id : (
-              v.key == "AZURE_CLIENT_ID" ? (
-                lookup(var.azure_credentials.client_ids, v.sp_name, var.azure_credentials.client_id)
-              ) : lookup(var.azure_credentials.client_ids, v.sp_name, v.value)
-            )
+            v.key == "AZURE_CLIENT_ID" ? (
+              lookup(var.azure_credentials.client_ids, v.sp_name, var.azure_credentials.client_id)
+            ) : lookup(var.azure_credentials.client_ids, v.sp_name, v.value)
           )
         ) : v.value
       )
@@ -25,25 +23,25 @@ locals {
   # Repository-level variables (env_or_repo == "repo")
   repo_variables = {
     for k, v in local.resolved_variables : k => v
-    if lower(v.env_or_repo) == "repo" && !can(regex("secret", v.type))
+    if lower(v.env_or_repo) == "repo" && can(regex("plaintext", v.type))
   }
 
   # Repository-level secrets (env_or_repo == "repo" and type includes "secret")
   repo_secrets = {
     for k, v in local.resolved_variables : k => v
-    if lower(v.env_or_repo) == "repo" && can(regex("secret", v.type))
+    if lower(v.env_or_repo) == "repo" && (can(regex("secret", v.type)) || can(regex("azure_credential", v.type)))
   }
 
   # Environment-level variables (env_or_repo != "repo")
   env_variables = {
     for k, v in local.resolved_variables : k => v
-    if lower(v.env_or_repo) != "repo" && !can(regex("secret", v.type))
+    if lower(v.env_or_repo) != "repo" && can(regex("plaintext", v.type))
   }
 
   # Environment-level secrets (env_or_repo != "repo" and type includes "secret")
   env_secrets = {
     for k, v in local.resolved_variables : k => v
-    if lower(v.env_or_repo) != "repo" && can(regex("secret", v.type))
+    if lower(v.env_or_repo) != "repo" && (can(regex("secret", v.type)) || can(regex("azure_credential", v.type)))
   }
 }
 
